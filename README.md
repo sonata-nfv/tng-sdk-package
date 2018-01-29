@@ -2,7 +2,7 @@
 
 # tng-sdk-package
 
-The repository contains the `tng-sdk-package` component that is part of the 5GTANGO SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST).
+The repository contains the `tng-sdk-package` component that is part of the [5GTANGO](http://www.5gtango.eu) SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST).
 
 The seed code of this component is based on the `son-cli` toolbox that was developed as part of SONATA-NFV ([http://sonata-nfv.eu](http://sonata-nfv.eu)).
 
