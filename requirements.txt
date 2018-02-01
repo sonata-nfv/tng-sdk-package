@@ -1,0 +1,4 @@
+setuptools
+pytest
+pyaml
+coloredlogs

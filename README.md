@@ -2,19 +2,21 @@
 
 # tng-sdk-package
 
-The repository contains the `tng-sdk-package` component that is part of the [5GTANGO](http://www.5gtango.eu) SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST).
+This repository contains the `tng-sdk-package` component that is part of the European H2020 project [5GTANGO](http://www.5gtango.eu) NFV SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST).
 
-The seed code of this component is based on the `son-cli` toolbox that was developed as part of SONATA-NFV ([http://sonata-nfv.eu](http://sonata-nfv.eu)).
+The seed code of this component is based on the `son-cli` toolbox that was developed as part of the European H2020 project [SONATA](http://sonata-nfv.eu).
 
 ## Installation
 
 ```bash
-TODO
+$ python setup.py install
 ```
 
 ## Usage
 
+```bash
 TODO
+```
 
 ## Documentation
 
@@ -27,7 +29,7 @@ To contribute to the development of this 5GTANGO component, you may use the very
 ### Setup development environment
 
 ```bash
-TODO
+$ python setup.py develop
 ```
 
 ### CI Integration
@@ -39,9 +41,8 @@ All pull requests are automatically tested by Jenkins and will only be accepted 
 You can also run the test manually on your local machine. To do so, you need to do:
 
 ```bash
-TODO
+$ pytest -v
 ```
-
 
 ## License
 
