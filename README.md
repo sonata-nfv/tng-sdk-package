@@ -1,4 +1,4 @@
-[![Join the chat at https://gitter.im/5gtango/tango-sdk](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/5gtango/tango-sdk)
+[![Join the chat at https://gitter.im/5gtango/tango-sdk](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/5gtango/tango-sdk) [![Build Status](http://jenkins.sonata-nfv.eu/buildStatus/icon?job=tng-sdk-package)](http://jenkins.sonata-nfv.eu/job/tng-sdk-package)
 
 # tng-sdk-package
 
