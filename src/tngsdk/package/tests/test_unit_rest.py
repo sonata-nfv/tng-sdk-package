@@ -1,4 +1,4 @@
-#  Copyright (c) 2018 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+#  Copyright (c) 2015 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
 # ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,20 +29,30 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
-import os
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+import unittest
+from tngsdk.package.cli import parse_args
+from tngsdk.package.pkgmgm import Packager
+from tngsdk.package.rest import Package, Project
 
 
-class Packager(object):
+class TngSdkRestTest(unittest.TestCase):
 
-    def __init__(self):
+    def setUp(self):
+        # list can manually define CLI arguments
+        self.args = parse_args([])
+        self.p = Packager()
+
+    def tearDown(self):
         pass
 
-    def package(self):
-        LOG.warning("packaging not implemented")
+    def test_project_endpoint(self):
+        ep = Project(self.p)
+        r = ep.post()
+        self.assertEqual(r[1], 501)
 
-    def unpackage(self):
-        LOG.warning("unpackaging not implemented")
+    def test_package_endpoint(self):
+        ep = Package(self.p)
+        r = ep.post()
+        self.assertEqual(r[1], 501)

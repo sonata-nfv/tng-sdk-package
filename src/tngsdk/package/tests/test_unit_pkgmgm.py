@@ -46,13 +46,13 @@ class TngSdkPkgMgmTest(unittest.TestCase):
         pass
 
     def test_instantiation(self):
-        p = Packager(self.args)
+        p = Packager()
         del p
 
     def test_package(self):
-        p = Packager(self.args)
+        p = Packager()
         p.package()
 
     def test_unpackage(self):
-        p = Packager(self.args)
+        p = Packager()
         p.unpackage()
