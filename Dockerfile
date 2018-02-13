@@ -39,4 +39,6 @@ ADD . /tng-sdk-package
 WORKDIR /tng-sdk-package
 RUN python setup.py install
 
-CMD [ "/bin/bash" ]
+EXPOSE 5099
+
+CMD ["tng-package","-s"]
