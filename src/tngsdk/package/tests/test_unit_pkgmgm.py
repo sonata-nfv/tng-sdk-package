@@ -30,36 +30,29 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
-import coloredlogs
-import os
 
-from tngsdk.package.cli import parse_args, CLI
+import unittest
+from tngsdk.package.cli import parse_args
 from tngsdk.package.pkgmgm import Packager
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+class TngSdkPkgMgmTest(unittest.TestCase):
 
+    def setUp(self):
+        # list can manually define CLI arguments
+        self.args = parse_args([])
 
-def logging_setup():
-    os.environ["COLOREDLOGS_LOG_FORMAT"] \
-        = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
-
-
-def main():
-    logging_setup()
-    args = parse_args()
-    # TODO better log configuration (e.g. file-based logging)
-    if args.verbose:
-        coloredlogs.install(level="DEBUG")
-    else:
-        coloredlogs.install(level="INFO")
-    # TODO validate if args combination makes any sense
-    p = Packager(args)
-    if args.service:
-        # TODO start package in service mode
+    def tearDown(self):
         pass
-    else:
-        # run package in CLI mode
-        c = CLI(args, p)
-        c.dispatch()
+
+    def test_instantiation(self):
+        p = Packager(self.args)
+        del p
+
+    def test_package(self):
+        p = Packager(self.args)
+        p.package()
+
+    def test_unpackage(self):
+        p = Packager(self.args)
+        p.unpackage()
