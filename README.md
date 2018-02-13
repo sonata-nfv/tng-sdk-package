@@ -15,9 +15,32 @@ $ python setup.py install
 
 ## Usage
 
+### CLI mode
+
+Runs the packager locally from the command line. Display detailed usage information with:
+
 ```bash
-TODO
+tng-package -h
 ```
+
+### Service mode
+
+Runs the packager as a micro service that exposes a RESTful API.
+
+#### Bare metal
+```bash
+tng-package -s
+```
+
+#### Docker-based
+```bash
+# build Docker container
+pipeline/build/build.sh
+
+# run Docker container
+docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
+```
+
 
 ## Documentation
 
