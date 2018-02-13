@@ -35,6 +35,7 @@ import coloredlogs
 import os
 
 from tngsdk.package.cli import parse_args, CLI
+from tngsdk.package.rest import RestApi
 from tngsdk.package.pkgmgm import Packager
 
 
@@ -55,10 +56,11 @@ def main():
     else:
         coloredlogs.install(level="INFO")
     # TODO validate if args combination makes any sense
-    p = Packager(args)
+    p = Packager()
     if args.service:
         # TODO start package in service mode
-        pass
+        a = RestApi(args, p)
+        a.serve()
     else:
         # run package in CLI mode
         c = CLI(args, p)
