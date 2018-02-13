@@ -46,7 +46,7 @@ class TngSdkRestTest(unittest.TestCase):
 
     def tearDown(self):
         pass
- 
+
     def test_project_endpoint(self):
         ep = Project(self.p)
         r = ep.post()
