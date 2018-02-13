@@ -1,4 +1,4 @@
-#  Copyright (c) 2015 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+#  Copyright (c) 2018 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
 # ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,37 +29,20 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-
 import logging
-import coloredlogs
 import os
-
-from tngsdk.package.cli import parse_args, CLI
-from tngsdk.package.pkgmgm import Packager
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
-def logging_setup():
-    os.environ["COLOREDLOGS_LOG_FORMAT"] \
-        = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+class Packager(object):
 
+    def __init__(self, args):
+        self._args = args
 
-def main():
-    logging_setup()
-    args = parse_args()
-    # TODO better log configuration (e.g. file-based logging)
-    if args.verbose:
-        coloredlogs.install(level="DEBUG")
-    else:
-        coloredlogs.install(level="INFO")
-    # TODO validate if args combination makes any sense
-    p = Packager(args)
-    if args.service:
-        # TODO start package in service mode
-        pass
-    else:
-        # run package in CLI mode
-        c = CLI(args, p)
-        c.dispatch()
+    def package(self):
+        LOG.warning("packaging not implemented")
+
+    def unpackage(self):
+        LOG.warning("unpackaging not implemented")
