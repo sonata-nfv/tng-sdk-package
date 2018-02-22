@@ -32,59 +32,49 @@
 import logging
 import os
 from flask import Flask
-from flask_restful import Resource, Api
+from flask_restplus import Resource, Api
+from werkzeug.contrib.fixers import ProxyFix
+from tngsdk.package.packager import PM
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
-class RestApi(object):
-
-    def __init__(self, args, packager):
-        self._args = args
-        self._p = packager
-        self._app = Flask(__name__)
-        self._api = Api(self._app)
-        self._define_routes()
-
-    def _define_routes(self):
-        self._api.add_resource(Package,
-                               "/package",
-                               resource_class_kwargs={"packager": self._p})
-        self._api.add_resource(Project,
-                               "/project",
-                               resource_class_kwargs={"packager": self._p})
-
-    def serve(self, debug=True):
-        # TODO replace this with WSGIServer for better performance
-        self._app.run(host=self._args.service_address,
-                      port=self._args.service_port,
-                      debug=debug)
+app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
+api = Api(app,
+          version="1.0",
+          title='5GTANGO tng-package API',
+          description="5GTANGO tng-package REST API " +
+          "to package/unpacke NFV packages.")
 
 
+def serve_forever(args, debug=True):
+    # TODO replace this with WSGIServer for better performance
+    app.run(host=args.service_address,
+            port=args.service_port,
+            debug=debug)
+
+
+@api.route("/package")
 class Package(Resource):
     """
     Endpoint for unpackaging.
     """
-
-    def __init__(self, packager):
-        self._p = packager
-
     def post(self):
         LOG.warning("endpoint not implemented")
-        self._p.package()
+        p = PM.new_packager()
+        p.unpackage()
         return "not implemented", 501
 
 
+@api.route("/project")
 class Project(Resource):
     """
     Endpoint for package creation.
     """
-
-    def __init__(self, packager):
-        self._p = packager
-
     def post(self):
         LOG.warning("endpoint not implemented")
-        self._p.unpackage()
+        p = PM.new_packager()
+        p.package()
         return "not implemented", 501

@@ -33,7 +33,6 @@
 
 import unittest
 from tngsdk.package.cli import parse_args
-from tngsdk.package.pkgmgm import Packager
 from tngsdk.package.rest import Package, Project
 
 
@@ -42,17 +41,16 @@ class TngSdkRestTest(unittest.TestCase):
     def setUp(self):
         # list can manually define CLI arguments
         self.args = parse_args([])
-        self.p = Packager()
 
     def tearDown(self):
         pass
 
     def test_project_endpoint(self):
-        ep = Project(self.p)
+        ep = Project()
         r = ep.post()
         self.assertEqual(r[1], 501)
 
     def test_package_endpoint(self):
-        ep = Package(self.p)
+        ep = Package()
         r = ep.post()
         self.assertEqual(r[1], 501)

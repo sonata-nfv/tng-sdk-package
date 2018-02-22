@@ -34,9 +34,7 @@ import logging
 import coloredlogs
 import os
 
-from tngsdk.package.cli import parse_args, CLI
-from tngsdk.package.rest import RestApi
-from tngsdk.package.pkgmgm import Packager
+from tngsdk.package import rest, cli
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -49,19 +47,16 @@ def logging_setup():
 
 def main():
     logging_setup()
-    args = parse_args()
+    args = cli.parse_args()
     # TODO better log configuration (e.g. file-based logging)
     if args.verbose:
         coloredlogs.install(level="DEBUG")
     else:
         coloredlogs.install(level="INFO")
     # TODO validate if args combination makes any sense
-    p = Packager()
     if args.service:
-        # TODO start package in service mode
-        a = RestApi(args, p)
-        a.serve()
+        # start tng-sdk-package in service mode (REST API)
+        rest.serve_forever(args)
     else:
         # run package in CLI mode
-        c = CLI(args, p)
-        c.dispatch()
+        cli.dispatch(args)
