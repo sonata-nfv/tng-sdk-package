@@ -2,4 +2,4 @@ setuptools
 pytest
 pyaml
 coloredlogs
-flask_restful
+flask-restplus

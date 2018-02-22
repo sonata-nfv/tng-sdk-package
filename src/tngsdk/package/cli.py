@@ -33,24 +33,21 @@ import logging
 import argparse
 import os
 import sys
+from tngsdk.package.packager import PM
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
-class CLI(object):
-
-    def __init__(self, args, packager):
-        self._args = args
-        self._p = packager
-
-    def dispatch(self):
-        if self._args.package:
-            # package creation
-            self._p.package()
-        else:
-            # un-packaging
-            self._p.unpackage()
+def dispatch(args):
+    if args.package:
+        # package creation
+        p = PM.new_packager()
+        p.package()
+    else:
+        # un-packaging
+        p = PM.new_packager()
+        p.unpackage()
 
 
 def parse_args(input_args=None):

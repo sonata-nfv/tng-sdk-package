@@ -1,4 +1,4 @@
-#  Copyright (c) 2015 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+#  Copyright (c) 2018 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
 # ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,30 +29,44 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
+import logging
+import os
+import uuid
 
 
-import unittest
-from tngsdk.package.cli import parse_args
-from tngsdk.package.pkgmgm import Packager
+LOG = logging.getLogger(os.path.basename(__file__))
 
 
-class TngSdkPkgMgmTest(unittest.TestCase):
+class PackagerManager(object):
 
-    def setUp(self):
-        # list can manually define CLI arguments
-        self.args = parse_args([])
+    def __init__(self):
+        self._packager_list = list()
 
-    def tearDown(self):
-        pass
-
-    def test_instantiation(self):
+    def new_packager(self, foramt="5GTANGO"):
+        # TODO clean up after packaging request has completed (pot. mem. leak)
+        #
         p = Packager()
-        del p
+        self._packager_list = p
+        return p
 
-    def test_package(self):
-        p = Packager()
-        p.package()
 
-    def test_unpackage(self):
-        p = Packager()
-        p.unpackage()
+# have one global instance of the manager
+PM = PackagerManager()
+
+
+class Packager(object):
+    # TODO abstract, have specific packagers per format
+
+    def __init__(self):
+        # unique identifier for this package request
+        self.uuid = uuid.uuid4()
+        LOG.info("Created {}".format(self))
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self.uuid)
+
+    def package(self):
+        LOG.warning("packaging not implemented")
+
+    def unpackage(self):
+        LOG.warning("unpackaging not implemented")
