@@ -32,15 +32,14 @@
 
 
 import unittest
-from tngsdk.package.cli import parse_args
-from tngsdk.package.rest import Package, Project
+from tngsdk.package.rest import Project, app
+# from io import BytesIO
 
 
 class TngSdkRestTest(unittest.TestCase):
 
     def setUp(self):
-        # list can manually define CLI arguments
-        self.args = parse_args([])
+        self.app = app.test_client()
 
     def tearDown(self):
         pass
@@ -51,6 +50,11 @@ class TngSdkRestTest(unittest.TestCase):
         self.assertEqual(r[1], 501)
 
     def test_package_endpoint(self):
-        ep = Package()
-        r = ep.post()
-        self.assertEqual(r[1], 501)
+        r = self.app.post("/packages")
+        self.assertEqual(r.status_code, 400)
+        # TODO not working yet
+        # r = self.app.post("/packages",
+        #                  buffered=True,
+        #                  content_type="multipart/form-data",
+        #                  data={"package": BytesIO(b"test")})
+        # self.assertEqual(r.status_code, 200)

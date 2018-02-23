@@ -32,8 +32,9 @@
 import logging
 import os
 from flask import Flask
-from flask_restplus import Resource, Api
+from flask_restplus import Resource, Api, fields
 from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.datastructures import FileStorage
 from tngsdk.package.packager import PM
 
 
@@ -50,25 +51,65 @@ api = Api(app,
 
 
 def serve_forever(args, debug=True):
+    """
+    Start REST API server. Blocks.
+    """
     # TODO replace this with WSGIServer for better performance
     app.run(host=args.service_address,
             port=args.service_port,
             debug=debug)
 
 
-@api.route("/package")
+packages_parser = api.parser()
+packages_parser.add_argument("package",
+                             location="files",
+                             type=FileStorage,
+                             required=True,
+                             help="Uploaded package file")
+packages_parser.add_argument("callback_url",
+                             location="form",
+                             required=False,
+                             default=None,
+                             help="URL called after unpackaging (optional)")
+packages_parser.add_argument("layer",
+                             location="form",
+                             required=False,
+                             default=None,
+                             help="Layer tag to be unpackaged (optional)")
+packages_parser.add_argument("format",
+                             location="form",
+                             required=False,
+                             default="eu.5gtango",
+                             help="Package format (optional)")
+
+packages_model = api.model("Packages", {
+    "package_process_uuid": fields.String(
+        description="UUID of started unpackaging process.",
+        required=True
+    )
+})
+
+
+@api.route("/packages")
 class Package(Resource):
     """
     Endpoint for unpackaging.
     """
-    def post(self):
-        LOG.warning("endpoint not implemented")
+    @api.expect(packages_parser)
+    @api.marshal_with(packages_model)
+    @api.response(200, "Successfully started unpackaging.")
+    @api.response(400, "Bad package: Could not unpackage given package.")
+    def post(self, **kwargs):
+        args = packages_parser.parse_args()
+        print(args["package"])
+        print(args["callback_url"])
         p = PM.new_packager()
+        # TODO: run async, and call callback when done
         p.unpackage()
-        return "not implemented", 501
+        return {"package_process_uuid": p.uuid}
 
 
-@api.route("/project")
+@api.route("/projects")
 class Project(Resource):
     """
     Endpoint for package creation.
