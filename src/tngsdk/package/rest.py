@@ -90,6 +90,23 @@ packages_model = api.model("Packages", {
 })
 
 
+def on_unpackaging_done(args):
+    """
+    Callback function for packaging procedure.
+    """
+    LOG.info("on_unpackaging_done")
+    LOG.warning("not implemented")
+    # TODO: Do callback url request
+
+
+def on_packaging_done(args):
+    """
+    Callback function for packaging procedure.
+    """
+    LOG.info("on_packaging_done")
+    LOG.warning("not implemented")
+
+
 @api.route("/packages")
 class Package(Resource):
     """
@@ -101,11 +118,10 @@ class Package(Resource):
     @api.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
         args = packages_parser.parse_args()
-        print(args["package"])
+        print(args["package"])  # TODO replace package data with local path to file
         print(args["callback_url"])
-        p = PM.new_packager()
-        # TODO: run async, and call callback when done
-        p.unpackage()
+        p = PM.new_packager(args)  # TODO pass args to packager
+        p.unpackage(callback_func=on_unpackaging_done)
         return {"package_process_uuid": p.uuid}
 
 
@@ -116,6 +132,6 @@ class Project(Resource):
     """
     def post(self):
         LOG.warning("endpoint not implemented")
-        p = PM.new_packager()
-        p.package()
+        p = PM.new_packager(None)
+        p.package(callback_func=on_packaging_done)
         return "not implemented", 501

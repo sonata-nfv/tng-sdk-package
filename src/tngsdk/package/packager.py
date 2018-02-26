@@ -37,16 +37,29 @@ import uuid
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
+class UnsupportedPackageFormat(BaseException):
+    pass
+
+
 class PackagerManager(object):
 
     def __init__(self):
         self._packager_list = list()
 
-    def new_packager(self, foramt="5GTANGO"):
+    def new_packager(self, args, pkg_format="eu.5gtango"):
+        # select the right Packager for the given format
+        packager_cls = None
+        if pkg_format == "eu.5gtango":
+            packager_cls = TangoPackager
+        elif pkg_format == "eu.etsi":
+            packager_cls = EtsiPackager
+        # check if we have a packager for the given format or abort
+        if packager_cls is None:
+            raise UnsupportedPackageFormat(
+                "Pkg. format: {} not supported.".format(pkg_format))
+        p = packager_cls(args)
         # TODO clean up after packaging request has completed (pot. mem. leak)
-        #
-        p = Packager()
-        self._packager_list = p
+        self._packager_list.append(p)
         return p
 
 
@@ -57,16 +70,32 @@ PM = PackagerManager()
 class Packager(object):
     # TODO abstract, have specific packagers per format
 
-    def __init__(self):
+    def __init__(self, args):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
-        LOG.info("Created {}".format(self))
+        self.args = args
+        LOG.info("Packager created: {}".format(self))
+        LOG.debug("Packager args: {}".format(self.args))
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)
 
-    def package(self):
+    def package(self, callback_func=None):
         LOG.warning("packaging not implemented")
 
-    def unpackage(self):
+    def unpackage(self, callback_func=None):
         LOG.warning("unpackaging not implemented")
+
+    def _do_unpackage(self):
+        LOG.warning("_do_unpackage has to be overwritten")
+
+    def _do_package(self):
+        LOG.warning("_do_unpackage has to be overwritten")
+
+
+class TangoPackager(Packager):
+    pass
+
+
+class EtsiPackager(Packager):
+    pass
