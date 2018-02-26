@@ -31,6 +31,8 @@
 # partner consortium (www.5gtango.eu).
 import logging
 import os
+import threading
+import time
 import uuid
 
 
@@ -58,7 +60,7 @@ class PackagerManager(object):
             raise UnsupportedPackageFormat(
                 "Pkg. format: {} not supported.".format(pkg_format))
         p = packager_cls(args)
-        # TODO clean up after packaging request has completed (pot. mem. leak)
+        # TODO cleanup after packaging has completed (memory leak!!!)
         self._packager_list.append(p)
         return p
 
@@ -68,7 +70,12 @@ PM = PackagerManager()
 
 
 class Packager(object):
-    # TODO abstract, have specific packagers per format
+    """
+    Abstract packager class.
+    Takes care about asynchronous packaging processes.
+    Actual packaging/unpackaging methods have to be overwritten
+    by format-specific packager classes.
+    """
 
     def __init__(self, args):
         # unique identifier for this package request
@@ -80,17 +87,55 @@ class Packager(object):
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)
 
+    def _wait_for_thread(self, t):
+        while t.is_alive():
+            LOG.debug("Waiting for package/unpackage process ...")
+            # TODO display a nicer process status when in CLI mode
+            t.join(timeout=0.5)
+
     def package(self, callback_func=None):
-        LOG.warning("packaging not implemented")
+        t = threading.Thread(
+            target=self._thread_package,
+            args=(callback_func,))
+        t.daemon = True
+        t.start()
+        if callback_func is None:
+            # behave synchronous if callback is None
+            self._wait_for_thread(t)
+            # TODO generate return values
 
     def unpackage(self, callback_func=None):
-        LOG.warning("unpackaging not implemented")
+        t = threading.Thread(
+            target=self._thread_unpackage,
+            args=(callback_func,))
+        t.daemon = True
+        t.start()
+        if callback_func is None:
+            # behave synchronous if callback is None
+            self._wait_for_thread(t)
+            # TODO generate return values
+
+    def _thread_unpackage(self, callback_func):
+        # call format specific implementation
+        self._do_unpackage()
+        # callback
+        if callback_func:
+            callback_func(self.args)
+
+    def _thread_package(self, callback_func):
+        # call format specific implementation
+        self._do_package()
+        # callback
+        if callback_func:
+            callback_func(self.args)
 
     def _do_unpackage(self):
-        LOG.warning("_do_unpackage has to be overwritten")
+        LOG.error("_do_unpackage has to be overwritten")
+        time.sleep(2)
 
     def _do_package(self):
-        LOG.warning("_do_unpackage has to be overwritten")
+        LOG.error("_do_unpackage has to be overwritten")
+        time.sleep(2)
 
 
 class TangoPackager(Packager):

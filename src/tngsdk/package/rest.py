@@ -118,7 +118,8 @@ class Package(Resource):
     @api.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
         args = packages_parser.parse_args()
-        print(args["package"])  # TODO replace package data with local path to file
+        # TODO replace package data with local path to file
+        print(args["package"])
         print(args["callback_url"])
         p = PM.new_packager(args)  # TODO pass args to packager
         p.unpackage(callback_func=on_unpackaging_done)
