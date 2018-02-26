@@ -131,11 +131,11 @@ class Packager(object):
 
     def _do_unpackage(self):
         LOG.error("_do_unpackage has to be overwritten")
-        time.sleep(2)
+        # time.sleep(2)
 
     def _do_package(self):
         LOG.error("_do_unpackage has to be overwritten")
-        time.sleep(2)
+        # time.sleep(2)
 
 
 class TangoPackager(Packager):
