@@ -32,6 +32,7 @@
 
 
 import unittest
+import threading
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 
@@ -40,19 +41,54 @@ class TngSdkPackagerTest(unittest.TestCase):
 
     def setUp(self):
         # list can manually define CLI arguments
-        self.args = parse_args([])
+        self.default_args = parse_args([])
 
     def tearDown(self):
         pass
 
-    def test_instantiation(self):
-        p = PM.new_packager()
+    def test_instantiation_default(self):
+        p = PM.new_packager(self.default_args)
+        self.assertIn("TangoPackager", str(type(p)))
         del p
 
-    def test_package(self):
-        p = PM.new_packager()
+    def test_instantiation_tango(self):
+        p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
+        self.assertIn("TangoPackager", str(type(p)))
+        del p
+
+    def test_instantiation_etsi(self):
+        p = PM.new_packager(self.default_args, pkg_format="eu.etsi")
+        self.assertIn("EtsiPackager", str(type(p)))
+        del p
+
+    def test_package_sync(self):
+        p = PM.new_packager(self.default_args)
         p.package()
 
-    def test_unpackage(self):
-        p = PM.new_packager()
+    def test_unpackage_sync(self):
+        p = PM.new_packager(self.default_args)
         p.unpackage()
+
+    def test_package_async(self):
+        lock = threading.Semaphore()
+        lock.acquire()
+
+        def cb(args):
+            lock.release()
+
+        p = PM.new_packager(self.default_args)
+        p.package(callback_func=cb)
+        self.assertTrue(lock.acquire(timeout=3.0),
+                        msg="callback was not called before timeout")
+
+    def test_unpackage_async(self):
+        lock = threading.Semaphore()
+        lock.acquire()
+
+        def cb(args):
+            lock.release()
+
+        p = PM.new_packager(self.default_args)
+        p.unpackage(callback_func=cb)
+        self.assertTrue(lock.acquire(timeout=3.0),
+                        msg="callback was not called before timeout")

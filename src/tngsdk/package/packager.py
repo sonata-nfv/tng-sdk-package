@@ -31,10 +31,16 @@
 # partner consortium (www.5gtango.eu).
 import logging
 import os
+import threading
+import time
 import uuid
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
+
+
+class UnsupportedPackageFormat(BaseException):
+    pass
 
 
 class PackagerManager(object):
@@ -42,11 +48,20 @@ class PackagerManager(object):
     def __init__(self):
         self._packager_list = list()
 
-    def new_packager(self, foramt="5GTANGO"):
-        # TODO clean up after packaging request has completed (pot. mem. leak)
-        #
-        p = Packager()
-        self._packager_list = p
+    def new_packager(self, args, pkg_format="eu.5gtango"):
+        # select the right Packager for the given format
+        packager_cls = None
+        if pkg_format == "eu.5gtango":
+            packager_cls = TangoPackager
+        elif pkg_format == "eu.etsi":
+            packager_cls = EtsiPackager
+        # check if we have a packager for the given format or abort
+        if packager_cls is None:
+            raise UnsupportedPackageFormat(
+                "Pkg. format: {} not supported.".format(pkg_format))
+        p = packager_cls(args)
+        # TODO cleanup after packaging has completed (memory leak!!!)
+        self._packager_list.append(p)
         return p
 
 
@@ -55,18 +70,77 @@ PM = PackagerManager()
 
 
 class Packager(object):
-    # TODO abstract, have specific packagers per format
+    """
+    Abstract packager class.
+    Takes care about asynchronous packaging processes.
+    Actual packaging/unpackaging methods have to be overwritten
+    by format-specific packager classes.
+    """
 
-    def __init__(self):
+    def __init__(self, args):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
-        LOG.info("Created {}".format(self))
+        self.args = args
+        LOG.info("Packager created: {}".format(self))
+        LOG.debug("Packager args: {}".format(self.args))
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)
 
-    def package(self):
-        LOG.warning("packaging not implemented")
+    def _wait_for_thread(self, t):
+        while t.is_alive():
+            LOG.debug("Waiting for package/unpackage process ...")
+            # TODO display a nicer process status when in CLI mode
+            t.join(timeout=0.5)
 
-    def unpackage(self):
-        LOG.warning("unpackaging not implemented")
+    def package(self, callback_func=None):
+        t = threading.Thread(
+            target=self._thread_package,
+            args=(callback_func,))
+        t.daemon = True
+        t.start()
+        if callback_func is None:
+            # behave synchronous if callback is None
+            self._wait_for_thread(t)
+            # TODO generate return values
+
+    def unpackage(self, callback_func=None):
+        t = threading.Thread(
+            target=self._thread_unpackage,
+            args=(callback_func,))
+        t.daemon = True
+        t.start()
+        if callback_func is None:
+            # behave synchronous if callback is None
+            self._wait_for_thread(t)
+            # TODO generate return values
+
+    def _thread_unpackage(self, callback_func):
+        # call format specific implementation
+        self._do_unpackage()
+        # callback
+        if callback_func:
+            callback_func(self.args)
+
+    def _thread_package(self, callback_func):
+        # call format specific implementation
+        self._do_package()
+        # callback
+        if callback_func:
+            callback_func(self.args)
+
+    def _do_unpackage(self):
+        LOG.error("_do_unpackage has to be overwritten")
+        time.sleep(2)
+
+    def _do_package(self):
+        LOG.error("_do_unpackage has to be overwritten")
+        time.sleep(2)
+
+
+class TangoPackager(Packager):
+    pass
+
+
+class EtsiPackager(Packager):
+    pass
