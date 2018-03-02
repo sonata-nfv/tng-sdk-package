@@ -54,9 +54,11 @@ api = Api(app,
 
 
 def dump_swagger(args):
+    # TODO replace this with the URL of a real tng-package service
     app.config.update(SERVER_NAME="tng-package.5gtango.eu")
     with app.app_context():
         with open(args.dump_swagger_path, "w") as f:
+            # TODO dump in nice formatting
             f.write(json.dumps(api.__schema__))
 
 
