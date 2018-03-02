@@ -33,6 +33,7 @@
 import logging
 import coloredlogs
 import os
+import sys
 
 from tngsdk.package import rest, cli
 
@@ -53,6 +54,11 @@ def main():
         coloredlogs.install(level="DEBUG")
     else:
         coloredlogs.install(level="INFO")
+    if args.dump_swagger:
+        rest.dump_swagger(args)
+        LOG.info("Dumped Swagger API model to {}".format(
+            args.dump_swagger_path))
+        sys.exit(0)
     # TODO validate if args combination makes any sense
     if args.service:
         # start tng-sdk-package in service mode (REST API)

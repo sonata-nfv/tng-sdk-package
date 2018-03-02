@@ -53,6 +53,13 @@ api = Api(app,
           "to package/unpacke NFV packages.")
 
 
+def dump_swagger(args):
+    app.config.update(SERVER_NAME="tng-package.5gtango.eu")
+    with app.app_context():
+        with open(args.dump_swagger_path, "w") as f:
+            f.write(json.dumps(api.__schema__))
+
+
 def serve_forever(args, debug=True):
     """
     Start REST API server. Blocks.

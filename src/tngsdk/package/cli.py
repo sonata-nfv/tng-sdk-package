@@ -97,6 +97,23 @@ def parse_args(input_args=None):
         action="store_true")
 
     parser.add_argument(
+        "--dump-swagger",
+        help="Dump Swagger JSON of REST API and exit."
+        + "\nDefault: False",
+        required=False,
+        default=False,
+        dest="dump_swagger",
+        action="store_true")
+
+    parser.add_argument(
+        "--dump-swagger-path",
+        help="Path to dump Swagger JSON using --dump-swagger"
+        + "\nDefault: doc/rest_api_model.json",
+        required=False,
+        default="doc/rest_api_model.json",
+        dest="dump_swagger_path")
+
+    parser.add_argument(
         "--address",
         help="Listen address of REST API when in service mode."
         + "\nDefault: 0.0.0.0",
