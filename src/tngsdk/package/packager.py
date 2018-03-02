@@ -32,7 +32,6 @@
 import logging
 import os
 import threading
-import time
 import uuid
 
 
@@ -120,26 +119,31 @@ class Packager(object):
         self._do_unpackage()
         # callback
         if callback_func:
-            callback_func(self.args)
+            callback_func(self)
 
     def _thread_package(self, callback_func):
         # call format specific implementation
         self._do_package()
         # callback
         if callback_func:
-            callback_func(self.args)
+            callback_func(self)
 
     def _do_unpackage(self):
         LOG.error("_do_unpackage has to be overwritten")
-        time.sleep(2)
+        # time.sleep(2)
 
     def _do_package(self):
         LOG.error("_do_unpackage has to be overwritten")
-        time.sleep(2)
+        # time.sleep(2)
 
 
 class TangoPackager(Packager):
-    pass
+
+    def _do_unpackage(self):
+        LOG.warning("TangoPackager _do_unpackage not implemented")
+
+    def _do_package(self):
+        LOG.warning("TangoPackager _do_package not implemented")
 
 
 class EtsiPackager(Packager):

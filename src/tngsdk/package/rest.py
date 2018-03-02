@@ -31,10 +31,13 @@
 # partner consortium (www.5gtango.eu).
 import logging
 import os
+import json
 from flask import Flask
 from flask_restplus import Resource, Api, fields
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
+import requests
+from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
 
 
@@ -44,7 +47,7 @@ LOG = logging.getLogger(os.path.basename(__file__))
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 api = Api(app,
-          version="1.0",
+          version="0.1",
           title='5GTANGO tng-package API',
           description="5GTANGO tng-package REST API " +
           "to package/unpacke NFV packages.")
@@ -90,21 +93,48 @@ packages_model = api.model("Packages", {
 })
 
 
-def on_unpackaging_done(args):
+def _do_callback_request(url, body):
+    try:
+        base_body = {
+            "eventName": "onPackageChangeEvent",
+            "packageId": "foobar",  # TODO replace with None
+            "packageLocation": "foobar"  # TODO replace with None
+        }
+        # apply parameters
+        base_body.update(body)
+        r = requests.post(url, json=base_body)
+    except RequestException as e:
+        LOG.error("Callback error: {}".format(e))
+        return -1
+    return r.status_code
+
+
+def on_unpackaging_done(packager):
     """
     Callback function for packaging procedure.
     """
-    LOG.info("on_unpackaging_done")
-    LOG.warning("not implemented")
-    # TODO: Do callback url request
+    LOG.info("DONE: Unpackaging using {}".format(packager))
+    if "callback_url" not in packager.args:
+        return
+    c_url = packager.args.callback_url
+    LOG.info("Callback: POST to '{}'".format(c_url))
+    # perform callback request
+    r_code = _do_callback_request(c_url, {})
+    LOG.info("DONE: Status {}".format(r_code))
 
 
-def on_packaging_done(args):
+def on_packaging_done(packager):
     """
     Callback function for packaging procedure.
     """
-    LOG.info("on_packaging_done")
-    LOG.warning("not implemented")
+    LOG.info("DONE: Packaging using {}".format(packager))
+    if "callback_url" not in packager.args:
+        return
+    c_url = packager.args.callback_url
+    LOG.info("Callback: POST to '{}'".format(c_url))
+    # perform callback request
+    r_code = _do_callback_request(c_url, {})
+    LOG.info("DONE: Status {}".format(r_code))
 
 
 @api.route("/packages")
