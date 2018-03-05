@@ -50,7 +50,7 @@ class TngSdkRestTest(unittest.TestCase):
         self.assertEqual(r[1], 501)
 
     def test_package_endpoint(self):
-        r = self.app.post("/packages")
+        r = self.app.post("/api/v1/packages")
         self.assertEqual(r.status_code, 400)
         # TODO not working yet
         # r = self.app.post("/packages",
