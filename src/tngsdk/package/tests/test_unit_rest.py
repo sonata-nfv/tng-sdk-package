@@ -33,17 +33,46 @@
 
 import unittest
 import json
-from tngsdk.package.rest import app
+from mock import patch
+from requests.exceptions import RequestException
+from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
+from tngsdk.package.packager import PM
+
+
+class MockResponse(object):
+        pass
+
+
+def mock_requests_post(url, json):
+    if url != "https://test.local:8000/cb":
+        raise RequestException("bad url")
+    if "event_name" not in json:
+        raise RequestException("bad request")
+    if "package_id" not in json:
+        raise RequestException("bad request")
+    if "package_location" not in json:
+        raise RequestException("bad request")
+    if "package_metadata" not in json:
+        raise RequestException("bad request")
+    if "package_process_uuid" not in json:
+        raise RequestException("bad request")
+    mr = MockResponse()
+    mr.status_code = 200
+    return mr
 
 
 class TngSdkRestTest(unittest.TestCase):
 
     def setUp(self):
+        # configure mocks
+        self.patcher = patch("requests.post", mock_requests_post)
+        self.patcher.start()
+        # configure flask
         app.config['TESTING'] = True
         self.app = app.test_client()
 
     def tearDown(self):
-        pass
+        self.patcher.stop()
 
     def test_project_v1_endpoint(self):
         # do a malformed post
@@ -64,3 +93,24 @@ class TngSdkRestTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
+        # do a post with a real package and callback_url
+        r = self.app.post("/api/v1/packages",
+                          content_type="multipart/form-data",
+                          data={"package": (
+                              open("misc/5gtango-ns-package-example.tgo",
+                                   "rb"),
+                              "5gtango-ns-package-example.tgo"),
+                                "callback_url": "https://test.local:8000/cb"})
+        self.assertEqual(r.status_code, 200)
+        rd = json.loads(r.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd)
+
+    def test_on_packaging_done(self):
+        p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
+        s = on_packaging_done(p)
+        self.assertEqual(s, 200)
+
+    def test_on_unpackaging_done(self):
+        p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
+        s = on_unpackaging_done(p)
+        self.assertEqual(s, 200)
