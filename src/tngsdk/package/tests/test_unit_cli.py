@@ -32,6 +32,8 @@
 
 
 import unittest
+import tempfile
+import shutil
 import tngsdk.package.cli as cli
 
 
@@ -44,11 +46,14 @@ class TngSdkPackageCliTest(unittest.TestCase):
         pass
 
     def test_cli_unpackage(self):
+        tempdir = tempfile.mkdtemp()
         args = cli.parse_args(
-            ["-u", "misc/5gtango-ns-package-example.tgo"])
+            ["-u", "misc/5gtango-ns-package-example.tgo",
+             "-o", tempdir])
         r = cli.dispatch(args)
         self.assertIn("error", r)
         self.assertIsNone(r.get("error"))
+        shutil.rmtree(tempdir)
 
     def test_cli_package(self):
         # TODO implement

@@ -32,6 +32,7 @@
 import logging
 import os
 import json
+import tempfile
 from flask import Flask, Blueprint
 from flask_restplus import Resource, Api, Namespace, fields
 from werkzeug.contrib.fixers import ProxyFix
@@ -155,6 +156,14 @@ def on_packaging_done(packager):
     return r_code
 
 
+def _write_to_temp_file(package_data):
+    fd, path = tempfile.mkstemp(suffix=".pkg")
+    os.close(fd)
+    package_data.save(path)
+    LOG.debug("Written uploaded package file to {}".format(path))
+    return path
+
+
 @api_v1.route("/packages")
 class Package(Resource):
     """
@@ -166,9 +175,10 @@ class Package(Resource):
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
         args = packages_parser.parse_args()
-        # TODO replace package data with local path to file
-        print(args["package"])
-        print(args["callback_url"])
+        temppkg_path = _write_to_temp_file(args.package)
+        args.output = tempfile.mkdtemp()
+        args.package = None
+        args.unpackage = temppkg_path
         p = PM.new_packager(args)  # TODO pass args to packager
         p.unpackage(callback_func=on_unpackaging_done)
         return {"package_process_uuid": p.uuid}

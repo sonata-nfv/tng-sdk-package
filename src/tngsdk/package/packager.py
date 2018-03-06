@@ -33,6 +33,8 @@ import logging
 import os
 import threading
 import uuid
+import zipfile
+import time
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -54,6 +56,8 @@ class PackagerManager(object):
             packager_cls = TangoPackager
         elif pkg_format == "eu.etsi":
             packager_cls = EtsiPackager
+        elif pkg_format == "test":
+            packager_cls = TestPackager
         # check if we have a packager for the given format or abort
         if packager_cls is None:
             raise UnsupportedPackageFormat(
@@ -102,7 +106,6 @@ class Packager(object):
         if callback_func is None:
             # behave synchronous if callback is None
             self._wait_for_thread(t)
-            # TODO generate return values
 
     def unpackage(self, callback_func=None):
         t = threading.Thread(
@@ -113,18 +116,23 @@ class Packager(object):
         if callback_func is None:
             # behave synchronous if callback is None
             self._wait_for_thread(t)
-            # TODO generate return values
 
     def _thread_unpackage(self, callback_func):
+        t_start = time.time()
         # call format specific implementation
         self.result = self._do_unpackage()
+        LOG.info("Packager done ({:.4f}s): {}".format(
+            time.time()-t_start, self))
         # callback
         if callback_func:
             callback_func(self)
 
     def _thread_package(self, callback_func):
+        t_start = time.time()
         # call format specific implementation
         self.result = self._do_package()
+        LOG.info("Packager done ({:.4f}s): {}".format(
+            time.time()-t_start, self))
         # callback
         if callback_func:
             callback_func(self)
@@ -140,10 +148,39 @@ class Packager(object):
         return {"error": "_do_unpackage has to be overwritten"}
 
 
-class TangoPackager(Packager):
+class TestPackager(Packager):
 
     def _do_unpackage(self):
-        LOG.warning("TangoPackager _do_unpackage not implemented")
+        return {"error": None}
+
+    def _do_package(self):
+        return {"error": None}
+
+
+class TangoPackager(Packager):
+
+    def _extract(self, path_zip, path_dest):
+        """
+        Simply extract the entire ZIP file for now.
+        Might be improved for larger files.
+        """
+        # get path of output folder (it is based on zip name)
+        outp = os.path.join(
+            path_dest, os.path.splitext(
+                os.path.basename(path_zip))[0])
+        LOG.debug("Unzipping '{}' to '{}' ...".format(path_zip, outp))
+        t_start = time.time()
+        # unzipping
+        with zipfile.ZipFile(path_zip, "r") as f:
+            f.extractall(path_dest)
+        LOG.debug("Unzipping done ({:.4f}s)".format(time.time()-t_start))
+        return outp
+
+    def _do_unpackage(self):
+        wd = self._extract(self.args.unpackage, self.args.output)
+        # TODO work on extracted files
+        # TODO clean up temporary files and folders
+        assert(wd is not None)
         return {"error": None}
 
     def _do_package(self):
