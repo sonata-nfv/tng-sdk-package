@@ -109,9 +109,10 @@ packages_model = api_v1.model("Packages", {
 def _do_callback_request(url, body):
     try:
         base_body = {
-            "eventName": "onPackageChangeEvent",
-            "packageId": "foobar",  # TODO replace with None
-            "packageLocation": "foobar"  # TODO replace with None
+            "event_name": "onPackageChangeEvent",
+            "package_id": "foobar",  # TODO replace with None
+            "package_location": "foobar",  # TODO replace with None
+            "package_metadata": None
         }
         # apply parameters
         base_body.update(body)
