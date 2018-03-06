@@ -61,7 +61,7 @@ def mock_requests_post(url, json):
     return mr
 
 
-class TngSdkRestTest(unittest.TestCase):
+class TngSdkPackageRestTest(unittest.TestCase):
 
     def setUp(self):
         # configure mocks

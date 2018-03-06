@@ -80,6 +80,7 @@ class Packager(object):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
         self.args = args
+        self.result = None
         LOG.info("Packager created: {}".format(self))
         LOG.debug("Packager args: {}".format(self.args))
 
@@ -116,14 +117,14 @@ class Packager(object):
 
     def _thread_unpackage(self, callback_func):
         # call format specific implementation
-        self._do_unpackage()
+        self.result = self._do_unpackage()
         # callback
         if callback_func:
             callback_func(self)
 
     def _thread_package(self, callback_func):
         # call format specific implementation
-        self._do_package()
+        self.result = self._do_package()
         # callback
         if callback_func:
             callback_func(self)
@@ -131,19 +132,23 @@ class Packager(object):
     def _do_unpackage(self):
         LOG.error("_do_unpackage has to be overwritten")
         # time.sleep(2)
+        return {"error": "_do_unpackage has to be overwritten"}
 
     def _do_package(self):
         LOG.error("_do_unpackage has to be overwritten")
         # time.sleep(2)
+        return {"error": "_do_unpackage has to be overwritten"}
 
 
 class TangoPackager(Packager):
 
     def _do_unpackage(self):
         LOG.warning("TangoPackager _do_unpackage not implemented")
+        return {"error": None}
 
     def _do_package(self):
         LOG.warning("TangoPackager _do_package not implemented")
+        return {"error": None}
 
 
 class EtsiPackager(Packager):

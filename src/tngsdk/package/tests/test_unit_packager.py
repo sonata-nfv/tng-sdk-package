@@ -37,7 +37,7 @@ from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 
 
-class TngSdkPackagerTest(unittest.TestCase):
+class TngSdkPackagePackagerTest(unittest.TestCase):
 
     def setUp(self):
         # list can manually define CLI arguments

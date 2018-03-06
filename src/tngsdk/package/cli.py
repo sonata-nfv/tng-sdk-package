@@ -33,6 +33,7 @@ import logging
 import argparse
 import os
 import sys
+import time
 from tngsdk.package.packager import PM
 
 
@@ -40,14 +41,15 @@ LOG = logging.getLogger(os.path.basename(__file__))
 
 
 def dispatch(args):
+    t_start = time.time()
+    p = PM.new_packager(args)
     if args.package:
-        # package creation
-        p = PM.new_packager()
         p.package()
     else:
-        # un-packaging
-        p = PM.new_packager()
         p.unpackage()
+    LOG.info("DONE ({:.4f}s)".format(time.time()-t_start))
+    LOG.debug("Packager result: {}".format(p.result))
+    return p.result
 
 
 def parse_args(input_args=None):
