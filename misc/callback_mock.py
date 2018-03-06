@@ -47,9 +47,9 @@ api = Api(app,
 
 
 model_onchange = api.model('OnChangeModel', {
-    'eventName': fields.String(required=True),
-    'packageId': fields.String(required=True),
-    'packageLocation': fields.String(required=True),
+    'event_name': fields.String(required=True),
+    'package_id': fields.String(required=True),
+    'package_location': fields.String(required=True),
 })
 
 
