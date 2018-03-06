@@ -4,3 +4,4 @@ pyaml
 coloredlogs
 requests
 flask-restplus
+mock

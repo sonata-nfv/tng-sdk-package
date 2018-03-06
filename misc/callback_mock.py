@@ -34,7 +34,7 @@
 # can be called by the packager.
 # It is only used for local tests, debugging, and developments.
 
-from flask import Flask
+from flask import Flask, request
 from flask_restplus import Resource, Api, fields
 from werkzeug.contrib.fixers import ProxyFix
 
@@ -50,6 +50,7 @@ model_onchange = api.model('OnChangeModel', {
     'event_name': fields.String(required=True),
     'package_id': fields.String(required=True),
     'package_location': fields.String(required=True),
+    'package_process_uuid': fields.String(required=True),
 })
 
 
@@ -60,7 +61,7 @@ class PackageOnChange(Resource):
     @api.response(200, "OK")
     @api.response(400, "Bad request")
     def post(self, **kwargs):
-        pass
+        print(request.data)
 
 
 if __name__ == "__main__":

@@ -112,7 +112,8 @@ def _do_callback_request(url, body):
             "event_name": "onPackageChangeEvent",
             "package_id": "foobar",  # TODO replace with None
             "package_location": "foobar",  # TODO replace with None
-            "package_metadata": None
+            "package_metadata": None,
+            "package_process_uuid": None
         }
         # apply parameters
         base_body.update(body)
@@ -130,11 +131,13 @@ def on_unpackaging_done(packager):
     LOG.info("DONE: Unpackaging using {}".format(packager))
     if packager.args is None or "callback_url" not in packager.args:
         return
-    c_url = packager.args.callback_url
+    c_url = packager.args.get("callback_url")
     LOG.info("Callback: POST to '{}'".format(c_url))
     # perform callback request
-    r_code = _do_callback_request(c_url, {})
+    r_code = _do_callback_request(c_url,
+                                  {"package_process_uuid": str(packager.uuid)})
     LOG.info("DONE: Status {}".format(r_code))
+    return r_code
 
 
 def on_packaging_done(packager):
@@ -144,11 +147,12 @@ def on_packaging_done(packager):
     LOG.info("DONE: Packaging using {}".format(packager))
     if packager.args is None or "callback_url" not in packager.args:
         return
-    c_url = packager.args.callback_url
+    c_url = packager.args.get("callback_url")
     LOG.info("Callback: POST to '{}'".format(c_url))
     # perform callback request
     r_code = _do_callback_request(c_url, {})
     LOG.info("DONE: Status {}".format(r_code))
+    return r_code
 
 
 @api_v1.route("/packages")
