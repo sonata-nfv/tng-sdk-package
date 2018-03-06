@@ -40,14 +40,18 @@ LOG = logging.getLogger(os.path.basename(__file__))
 
 
 def dispatch(args):
+    # set default output paths
+    if args.output is None:
+            args.output = os.getcwd()
+    # create packager object
+    p = PM.new_packager(args)
+    # trigger pack/unpack
     if args.package:
-        # package creation
-        p = PM.new_packager()
         p.package()
     else:
-        # un-packaging
-        p = PM.new_packager()
         p.unpackage()
+    LOG.debug("Packager result: {}".format(p.result))
+    return p.result
 
 
 def parse_args(input_args=None):
@@ -69,6 +73,14 @@ def parse_args(input_args=None):
         required=False,
         default=None,
         dest="unpackage")
+
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Path to outputs (optional)",
+        required=False,
+        default=None,
+        dest="output")
 
     parser.add_argument(
         "--format",

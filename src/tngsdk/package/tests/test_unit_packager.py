@@ -37,7 +37,7 @@ from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 
 
-class TngSdkPackagerTest(unittest.TestCase):
+class TngSdkPackagePackagerTest(unittest.TestCase):
 
     def setUp(self):
         # list can manually define CLI arguments
@@ -62,11 +62,11 @@ class TngSdkPackagerTest(unittest.TestCase):
         del p
 
     def test_package_sync(self):
-        p = PM.new_packager(self.default_args)
+        p = PM.new_packager(self.default_args, pkg_format="test")
         p.package()
 
     def test_unpackage_sync(self):
-        p = PM.new_packager(self.default_args)
+        p = PM.new_packager(self.default_args, pkg_format="test")
         p.unpackage()
 
     def test_package_async(self):
@@ -76,7 +76,7 @@ class TngSdkPackagerTest(unittest.TestCase):
         def cb(args):
             lock.release()
 
-        p = PM.new_packager(self.default_args)
+        p = PM.new_packager(self.default_args, pkg_format="test")
         p.package(callback_func=cb)
         self.assertTrue(lock.acquire(timeout=3.0),
                         msg="callback was not called before timeout")
@@ -88,7 +88,7 @@ class TngSdkPackagerTest(unittest.TestCase):
         def cb(args):
             lock.release()
 
-        p = PM.new_packager(self.default_args)
+        p = PM.new_packager(self.default_args, pkg_format="test")
         p.unpackage(callback_func=cb)
         self.assertTrue(lock.acquire(timeout=3.0),
                         msg="callback was not called before timeout")
