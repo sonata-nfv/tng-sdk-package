@@ -32,29 +32,35 @@
 
 
 import unittest
-from tngsdk.package.rest import Project, app
-# from io import BytesIO
+import json
+from tngsdk.package.rest import app
 
 
 class TngSdkRestTest(unittest.TestCase):
 
     def setUp(self):
+        app.config['TESTING'] = True
         self.app = app.test_client()
 
     def tearDown(self):
         pass
 
-    def test_project_endpoint(self):
-        ep = Project()
-        r = ep.post()
-        self.assertEqual(r[1], 501)
+    def test_project_v1_endpoint(self):
+        # do a malformed post
+        r = self.app.post("/api/v1/projects")
+        self.assertEqual(r.status_code, 501)
 
-    def test_package_endpoint(self):
+    def test_package_v1_endpoint(self):
+        # do a malformed post
         r = self.app.post("/api/v1/packages")
         self.assertEqual(r.status_code, 400)
-        # TODO not working yet
-        # r = self.app.post("/packages",
-        #                  buffered=True,
-        #                  content_type="multipart/form-data",
-        #                  data={"package": BytesIO(b"test")})
-        # self.assertEqual(r.status_code, 200)
+        # do a post with a real package
+        r = self.app.post("/api/v1/packages",
+                          content_type="multipart/form-data",
+                          data={"package": (
+                              open("misc/5gtango-ns-package-example.tgo",
+                                   "rb"),
+                              "5gtango-ns-package-example.tgo")})
+        self.assertEqual(r.status_code, 200)
+        rd = json.loads(r.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd)
