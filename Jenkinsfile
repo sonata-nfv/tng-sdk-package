@@ -43,11 +43,13 @@ pipeline {
                 echo 'Stage: Smoke test... (not implemented)'
             }
         }
-        stage('Publication') {
+        stage('Promoting containers to integration env') {
+            when {
+                branch 'master'
+            }
             steps {
-                echo 'Stage: Publication... (not implemented)'
-                // Public container publication
-                // Pypi publication
+                echo 'Stage: Promoting containers to integration env'
+                sh "pipeline/promote/promote-int.sh"
             }
         }
     }
