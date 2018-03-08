@@ -29,7 +29,8 @@ pipeline {
         }
         stage('Container publication') {
             steps {
-                echo 'Stage: Container publication... (not implemented)'
+                echo 'Stage: Container publication...'
+                sh "pipeline/publish/publish.sh"
             }
         }
         stage('Deploy in integration') {
@@ -42,11 +43,13 @@ pipeline {
                 echo 'Stage: Smoke test... (not implemented)'
             }
         }
-        stage('Publication') {
+        stage('Promoting containers to integration env') {
+            when {
+                branch 'master'
+            }
             steps {
-                echo 'Stage: Publication... (not implemented)'
-                // Public container publication
-                // Pypi publication
+                echo 'Stage: Promoting containers to integration env'
+                sh "pipeline/promote/promote-int.sh"
             }
         }
     }
