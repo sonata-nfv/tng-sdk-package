@@ -29,7 +29,8 @@ pipeline {
         }
         stage('Container publication') {
             steps {
-                echo 'Stage: Container publication... (not implemented)'
+                echo 'Stage: Container publication...'
+                sh "pipeline/publish/publish.sh"
             }
         }
         stage('Deploy in integration') {
