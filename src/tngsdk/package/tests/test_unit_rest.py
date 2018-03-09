@@ -33,6 +33,7 @@
 
 import unittest
 import json
+import time
 from mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
@@ -104,6 +105,38 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
+
+    def test_packager_v1_status_endpoint(self):
+        # do a post with a real package
+        r = self.app.post("/api/v1/packages",
+                          content_type="multipart/form-data",
+                          data={"package": (
+                              open("misc/5gtango-ns-package-example.tgo",
+                                   "rb"),
+                              "5gtango-ns-package-example.tgo")})
+        self.assertEqual(r.status_code, 200)
+        rd = json.loads(r.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd)
+        # do a call to the status endpoint
+        r2 = self.app.get(
+            "/api/v1/packages/{}".format(
+                rd.get("package_process_uuid")))
+        self.assertEqual(r2.status_code, 200)
+        rd2 = json.loads(r2.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd2)
+        self.assertEqual(rd2.get("status"), "running")
+        time.sleep(1)  # wait a bit so that packager can finalize
+        r2 = self.app.get(
+            "/api/v1/packages/{}".format(
+                rd.get("package_process_uuid")))
+        self.assertEqual(r2.status_code, 200)
+        rd2 = json.loads(r2.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd2)
+        self.assertEqual(rd2.get("status"), "done")
+        # do a call to a non existing packager status
+        r2 = self.app.get(
+            "/api/v1/packages/{}".format("foo-bar"))
+        self.assertEqual(r2.status_code, 404)
 
     def test_on_packaging_done(self):
         p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
