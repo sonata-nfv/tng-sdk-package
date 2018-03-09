@@ -44,6 +44,13 @@ class UnsupportedPackageFormat(BaseException):
     pass
 
 
+class PkgStatus(object):
+    WAITING = "waiting"
+    RUNNING = "running"
+    FAILED = "failed"
+    DONE = "done"
+
+
 class PackagerManager(object):
 
     def __init__(self):
@@ -67,6 +74,13 @@ class PackagerManager(object):
         self._packager_list.append(p)
         return p
 
+    def get_packager(self, uuid):
+        LOG.debug(self._packager_list)
+        for p in self._packager_list:
+            if str(p.uuid) == uuid:
+                return p
+        return None
+
 
 # have one global instance of the manager
 PM = PackagerManager()
@@ -83,6 +97,8 @@ class Packager(object):
     def __init__(self, args):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
+        self.status = PkgStatus.WAITING
+        self.error_msg = None
         self.args = args
         self.result = None
         LOG.info("Packager created: {}".format(self))
@@ -102,6 +118,7 @@ class Packager(object):
             target=self._thread_package,
             args=(callback_func,))
         t.daemon = True
+        self.status = PkgStatus.RUNNING
         t.start()
         if callback_func is None:
             # behave synchronous if callback is None
@@ -112,6 +129,7 @@ class Packager(object):
             target=self._thread_unpackage,
             args=(callback_func,))
         t.daemon = True
+        self.status = PkgStatus.RUNNING
         t.start()
         if callback_func is None:
             # behave synchronous if callback is None
@@ -123,6 +141,7 @@ class Packager(object):
         self.result = self._do_unpackage()
         LOG.info("Packager done ({:.4f}s): {}".format(
             time.time()-t_start, self))
+        self.status = PkgStatus.DONE
         # callback
         if callback_func:
             callback_func(self)
@@ -133,6 +152,7 @@ class Packager(object):
         self.result = self._do_package()
         LOG.info("Packager done ({:.4f}s): {}".format(
             time.time()-t_start, self))
+        self.status = PkgStatus.DONE
         # callback
         if callback_func:
             callback_func(self)

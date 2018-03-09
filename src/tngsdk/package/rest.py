@@ -99,11 +99,23 @@ packages_parser.add_argument("format",
                              default="eu.5gtango",
                              help="Package format (optional)")
 
-packages_model = api_v1.model("Packages", {
+packages_post_return_model = api_v1.model("PackagesPostReturn", {
     "package_process_uuid": fields.String(
         description="UUID of started unpackaging process.",
-        required=True
-    )
+        required=True)
+})
+
+packages_get_return_model = api_v1.model("PackagesGetReturn", {
+    "package_process_uuid": fields.String(
+        description="UUID of started unpackaging process.",
+        required=True),
+    "status": fields.String(
+        description="Status of the unpacking process:"
+        + " waiting|runnig|failed|done",
+        required=True),
+    "error_msg": fields.String(
+        description="More detailed error message.",
+        required=False),
 })
 
 
@@ -165,12 +177,12 @@ def _write_to_temp_file(package_data):
 
 
 @api_v1.route("/packages")
-class Package(Resource):
+class Packages(Resource):
     """
     Endpoint for unpackaging.
     """
     @api_v1.expect(packages_parser)
-    @api_v1.marshal_with(packages_model)
+    @api_v1.marshal_with(packages_post_return_model)
     @api_v1.response(200, "Successfully started unpackaging.")
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
@@ -182,6 +194,22 @@ class Package(Resource):
         p = PM.new_packager(args)  # TODO pass args to packager
         p.unpackage(callback_func=on_unpackaging_done)
         return {"package_process_uuid": p.uuid}
+
+
+@api_v1.route("/packages/<string:package_process_uuid>")
+class PackagesItem(Resource):
+
+    @api_v1.marshal_with(packages_get_return_model)
+    @api_v1.response(200, "OK")
+    @api_v1.response(404, "Package process not found.")
+    def get(self, package_process_uuid):
+        p = PM.get_packager(package_process_uuid)
+        if p is None:
+            return {"error_msg": "Package process not found: {}".format(
+                package_process_uuid)}, 404
+        return {"package_process_uuid": p.uuid,
+                "status": p.status,
+                "error_msg": p.error_msg}
 
 
 @api_v1.route("/projects")
