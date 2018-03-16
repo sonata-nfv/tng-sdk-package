@@ -35,6 +35,9 @@ import threading
 import uuid
 import zipfile
 import time
+import tempfile
+import io
+import glob
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -177,36 +180,124 @@ class TestPackager(Packager):
         return {"error": None}
 
 
-class TangoPackager(Packager):
+class CsarBasePackager(Packager):
 
-    def _extract(self, path_zip, path_dest):
-        """
-        Simply extract the entire ZIP file for now.
-        Might be improved for larger files.
-        """
-        # get path of output folder (it is based on zip name)
-        outp = os.path.join(
-            path_dest, os.path.splitext(
-                os.path.basename(path_zip))[0])
-        LOG.debug("Unzipping '{}' to '{}' ...".format(path_zip, outp))
-        t_start = time.time()
-        # unzipping
-        with zipfile.ZipFile(path_zip, "r") as f:
-            f.extractall(path_dest)
-        LOG.debug("Unzipping done ({:.4f}s)".format(time.time()-t_start))
-        return outp
+    def _read_tosca_meta(self, wd):
+        with open(os.path.join(wd, "TOSCA-Metadata/TOSCA.meta"), "r") as f:
+            parse_block_based_meta_file(f)
+
+
+class EtsiPackager(CsarBasePackager):
+
+    def _read_etsi_manifest(self, wd):
+        pass
+
+
+class TangoPackager(EtsiPackager):
+
+    def _read_napd(self, wd):
+        # TODO validate (get schema with a global helper?)
+        pass
+
+    def _collect_metadata(self, wd):
+        tosca_meta = self._read_tosca_meta(wd)
+        etsi_mf = self._read_etsi_manifest(wd)
+        napd = self._read_napd(wd)
+        print(tosca_meta)
+        print(etsi_mf)
+        print(napd)
+        # TODO unify input metadata
+        return dict()
 
     def _do_unpackage(self):
-        wd = self._extract(self.args.unpackage, self.args.output)
+        wd = extract_zip_file_to_temp(self.args.unpackage)
+        md = self._collect_metadata(wd)
         # TODO work on extracted files
         # TODO clean up temporary files and folders
+        print(md)
         assert(wd is not None)
+        assert(md is not None)
         return {"error": None}
 
     def _do_package(self):
         LOG.warning("TangoPackager _do_package not implemented")
         return {"error": None}
 
+# #########################
+# Helpers
+# #########################
 
-class EtsiPackager(Packager):
-    pass
+
+def find_root_folder_of_pkg(d):
+    """
+    Zip files can be odd and may contain folders
+    w. name of zip file which then contain the root of
+    the package structure.
+    This functions tries to find the right root.
+    """
+    root_indicators = ["TOSCA-Metadata"]
+    for ri in root_indicators:
+        lst = glob.glob("{}/{}".format(d, ri))
+        if len(lst) > 0:
+            return lst[0].replace(ri, "")
+    return d
+
+
+def extract_zip_file_to_temp(path_zip, path_dest=None):
+        """
+        Simply extract the entire ZIP file for now.
+        Might be improved for larger files.
+        Always extract to a temp folder to work on.
+        """
+        if path_dest is None:
+            path_dest = tempfile.mkdtemp()
+        LOG.debug("Unzipping '{}' ...".format(path_zip))
+        t_start = time.time()
+        # unzipping
+        with zipfile.ZipFile(path_zip, "r") as f:
+            f.extractall(path_dest)
+        LOG.debug("Unzipping done ({:.4f}s)".format(time.time()-t_start))
+        # get path of output folder (it is based on zip name)
+        wd = find_root_folder_of_pkg(path_dest)
+        LOG.debug("Working root '{}'".format(wd))
+        return wd
+
+
+def parse_block_based_meta_file(inputs):
+    """
+    Parses a block-based meta data file, like used by TOSCA.
+    Return list of dicts. Each dict is a block.
+    param: inputs: string or file IO object
+    [block1, block2, blockN]
+    """
+    def _parse_line(l):
+        prts = l.split(": ")  # colon followed by space (TOSCA)
+        if len(prts) < 2:
+            LOG.warning("Malformed line in block: '{}' len: {}"
+                        .format(l, len(l)))
+            return None, None
+        key = str(prts.pop(0)).strip()  # first part is keys
+        value = (": ".join(prts)).strip()  # rest is value
+        return key, value
+
+    blocks = list()
+    # extract content as stirng
+    content = ""
+    if isinstance(inputs, io.IOBase):
+        # read content from file
+        content = inputs.read()
+    else:  # assume string as input
+        content = inputs
+    # parse line by line and build blocks
+    curr_block = dict()
+    for l in content.split("\n"):
+        if len(l.strip()) < 1:
+            # new block (empty line)
+            if len(curr_block) > 0:
+                blocks.append(curr_block.copy())
+            curr_block = dict()
+        else:  # parse line and add to curr_block
+            k, v = _parse_line(l.strip())
+            if k is not None:
+                curr_block[k] = v
+    return blocks

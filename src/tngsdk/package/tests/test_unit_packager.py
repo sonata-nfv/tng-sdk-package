@@ -34,7 +34,49 @@
 import unittest
 import threading
 from tngsdk.package.cli import parse_args
-from tngsdk.package.packager import PM
+from tngsdk.package.packager import PM, parse_block_based_meta_file
+
+
+class TngSdkPackagePackagerHelperTest(unittest.TestCase):
+
+    def setUp(self):
+        # list can manually define CLI arguments
+        self.default_args = parse_args([])
+
+    def tearDown(self):
+        pass
+
+    # @unittest.skip("skip")
+    def test_parse_block_based_meta_file(self):
+        # test case
+        i = """
+            Key1: Value1
+            """
+        b = parse_block_based_meta_file(i)
+        self.assertEqual(len(b), 1)
+        # test case
+        i = """
+            Key1: Value1
+            Key2: Value2:Value
+            """
+        b = parse_block_based_meta_file(i)
+        self.assertEqual(len(b), 1)
+        self.assertEqual(b[0], {"Key1": "Value1", "Key2": "Value2:Value"})
+        # test case
+        i = """
+
+            Key1: Value1
+            Key1: Value1
+            Key1: Value1
+
+            Key1: Value1
+
+            Key1: Value1
+
+            Key1: Value1
+            """
+        b = parse_block_based_meta_file(i)
+        self.assertEqual(len(b), 4)
 
 
 class TngSdkPackagePackagerTest(unittest.TestCase):

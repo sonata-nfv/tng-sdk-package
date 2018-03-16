@@ -188,7 +188,6 @@ class Packages(Resource):
     def post(self, **kwargs):
         args = packages_parser.parse_args()
         temppkg_path = _write_to_temp_file(args.package)
-        args.output = tempfile.mkdtemp()
         args.package = None
         args.unpackage = temppkg_path
         p = PM.new_packager(args)  # TODO pass args to packager

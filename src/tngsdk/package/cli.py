@@ -58,6 +58,7 @@ def parse_args(input_args=None):
     parser = argparse.ArgumentParser(
         description="5GTANGO SDK packager")
 
+    # input/output
     parser.add_argument(
         "-p",
         "--package",
@@ -99,6 +100,24 @@ def parse_args(input_args=None):
         dest="verbose",
         action="store_true")
 
+    # packaging/unpackaging process
+    parser.add_argument(
+        "--ignore-checksums",
+        help="Do not validate artifact checksums.",
+        required=False,
+        default=False,
+        dest="no_checksums",
+        action="store_true")
+
+    parser.add_argument(
+        "--no-autoversion",
+        help="Auto. increase package version field.",
+        required=False,
+        default=False,
+        dest="no_autoversion",
+        action="store_true")
+
+    # service management
     parser.add_argument(
         "-s",
         "--service",
