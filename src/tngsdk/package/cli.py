@@ -117,6 +117,15 @@ def parse_args(input_args=None):
         dest="no_autoversion",
         action="store_true")
 
+    parser.add_argument(
+        "--offline",
+        help="Don't resolve online resource, like schemas"
+        + " for validation.",
+        required=False,
+        default=False,
+        dest="offline",
+        action="store_true")
+
     # service management
     parser.add_argument(
         "-s",
