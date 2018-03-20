@@ -43,7 +43,11 @@ import glob
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
-class UnsupportedPackageFormat(BaseException):
+class UnsupportedPackageFormatException(BaseException):
+    pass
+
+
+class MissingMetadataException(BaseException):
     pass
 
 
@@ -70,7 +74,7 @@ class PackagerManager(object):
             packager_cls = TestPackager
         # check if we have a packager for the given format or abort
         if packager_cls is None:
-            raise UnsupportedPackageFormat(
+            raise UnsupportedPackageFormatException(
                 "Pkg. format: {} not supported.".format(pkg_format))
         p = packager_cls(args)
         # TODO cleanup after packaging has completed (memory leak!!!)
@@ -183,14 +187,52 @@ class TestPackager(Packager):
 class CsarBasePackager(Packager):
 
     def _read_tosca_meta(self, wd):
-        with open(os.path.join(wd, "TOSCA-Metadata/TOSCA.meta"), "r") as f:
-            parse_block_based_meta_file(f)
+        """
+        Tries to find TOSCA.meta file.
+        Returns list of blocks from that file
+        or an list with a single empty block.
+        """
+        try:
+            path = search_for_file(os.path.join(wd, "**/TOSCA.meta"))
+            if path is None:
+                raise MissingMetadataException("Cannot find TOSCA.meta")
+            with open(path, "r") as f:
+                return parse_block_based_meta_file(f)
+        except BaseException as e:
+            LOG.error("Cannot read TOSCA metadata: {}".format(e))
+        return [{}]
 
 
 class EtsiPackager(CsarBasePackager):
 
-    def _read_etsi_manifest(self, wd):
-        pass
+    def _read_etsi_manifest(self, wd, tosca_meta):
+        """
+        Tries to find ETSI Manifest file.
+        - try 1: Use "Entry-Manifest" from TOSCA.meta
+        - try 2: Look for *.mf file in root of package
+        Returns list of blocks from that file
+        or an empty list.
+        """
+        try:
+            if (tosca_meta is not None
+                    and tosca_meta[0].get("Entry-Manifest") is not None):
+                # try 1:
+                path = search_for_file(
+                    os.path.join(wd, tosca_meta[0].get("Entry-Manifest")))
+                if path is None:
+                    LOG.warning("Entry-Manifest '{}' not found.".format(
+                        tosca_meta[0].get("Entry-Manifest")))
+                    # try 2:
+                    path = search_for_file(
+                        os.path.join(wd, "*.mf"), recursive=False)
+            if path is None:
+                raise MissingMetadataException(
+                    "Cannot find ETSI manifest file.")
+            with open(path, "r") as f:
+                return parse_block_based_meta_file(f)
+        except BaseException as e:
+            LOG.error("Cannot read ETSI manifest file: {}".format(e))
+        return [{}]
 
 
 class TangoPackager(EtsiPackager):
@@ -201,12 +243,14 @@ class TangoPackager(EtsiPackager):
 
     def _collect_metadata(self, wd):
         tosca_meta = self._read_tosca_meta(wd)
-        etsi_mf = self._read_etsi_manifest(wd)
+        etsi_mf = self._read_etsi_manifest(wd, tosca_meta)
         napd = self._read_napd(wd)
         print(tosca_meta)
         print(etsi_mf)
         print(napd)
         # TODO unify input metadata
+        # (this is non trivial! deduplicate information,
+        # the idea is to use a NAPD skeleton and fill its gaps)
         return dict()
 
     def _do_unpackage(self):
@@ -263,6 +307,20 @@ def extract_zip_file_to_temp(path_zip, path_dest=None):
         return wd
 
 
+def search_for_file(path="**/TOSCA.meta", recursive=True):
+    """
+    Recursively searches for a file.
+    If there are multiple matches, the first one is
+    returned.
+    param: path: src/**/*.c
+    """
+    f_lst = list(glob.iglob(path, recursive=recursive))
+    LOG.debug("Searching for '{}' found: {}".format(path, f_lst))
+    if len(f_lst) > 0:
+        return f_lst[0]
+    return None
+
+
 def parse_block_based_meta_file(inputs):
     """
     Parses a block-based meta data file, like used by TOSCA.
@@ -271,7 +329,7 @@ def parse_block_based_meta_file(inputs):
     [block1, block2, blockN]
     """
     def _parse_line(l):
-        prts = l.split(": ")  # colon followed by space (TOSCA)
+        prts = l.split(":")  # colon followed by space (TOSCA)
         if len(prts) < 2:
             LOG.warning("Malformed line in block: '{}' len: {}"
                         .format(l, len(l)))
@@ -300,4 +358,8 @@ def parse_block_based_meta_file(inputs):
             k, v = _parse_line(l.strip())
             if k is not None:
                 curr_block[k] = v
+    if len(blocks) < 1:
+        # ensure that block_0 is always there
+        LOG.warning("No blocks found in: {}".format(inputs))
+        blocks.append(dict())
     return blocks

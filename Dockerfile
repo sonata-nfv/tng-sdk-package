@@ -32,7 +32,7 @@
 FROM python:3.6-slim
 MAINTAINER 5GTANGO
 
-RUN pip install pycodestyle
+RUN pip install flake8
 
 ADD . /tng-sdk-package
 
