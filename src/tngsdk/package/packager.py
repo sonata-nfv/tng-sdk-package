@@ -38,6 +38,8 @@ import time
 import tempfile
 import io
 import glob
+import yaml
+from tngsdk.package.validator import validate_yaml_online
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -48,6 +50,10 @@ class UnsupportedPackageFormatException(BaseException):
 
 
 class MissingMetadataException(BaseException):
+    pass
+
+
+class NapdNotValidException(BaseException):
     pass
 
 
@@ -237,14 +243,47 @@ class EtsiPackager(CsarBasePackager):
 
 class TangoPackager(EtsiPackager):
 
-    def _read_napd(self, wd):
-        # TODO validate (get schema with a global helper?)
-        pass
+    def _read_napd(self, wd, tosca_meta):
+        """
+        Tries to read NAPD file and optionally validates it
+        against its online schema.
+        - try 1: Use block_1 from TOSCA.meta to find NAPD
+        - try 2: Look for **/NAPD.yaml
+        Returns valid NAPD schema formatted dict.
+        """
+        try:
+            if (tosca_meta is not None
+                    and len(tosca_meta) > 1):
+                # try 1:
+                path = search_for_file(
+                    os.path.join(wd, tosca_meta[1].get("Name")))
+                if path is None:
+                    LOG.warning("TOSCA block_1 file '{}' not found.".format(
+                        tosca_meta[1].get("Name")))
+                    # try 2:
+                    path = search_for_file(
+                        os.path.join(wd, "**/NAPD.yaml"), recursive=False)
+            if path is None:
+                raise MissingMetadataException(
+                    "Cannot find NAPD.yaml file.")
+            with open(path, "r") as f:
+                data = yaml.load(f)
+                if self.args.offline:
+                    LOG.warning("Skipping NAPD validation (--offline)")
+                    return data  # skip validation step
+                # validate
+                if validate_yaml_online(data):
+                    return data
+                raise NapdNotValidException(
+                    "Validation of {} failed.".format(path))
+        except BaseException as e:
+            LOG.error("Cannot read NAPD.yaml file: {}".format(e))
+        return dict()  # TODO return an empty NAPD skeleton here
 
     def _collect_metadata(self, wd):
         tosca_meta = self._read_tosca_meta(wd)
         etsi_mf = self._read_etsi_manifest(wd, tosca_meta)
-        napd = self._read_napd(wd)
+        napd = self._read_napd(wd, tosca_meta)
         print(tosca_meta)
         print(etsi_mf)
         print(napd)

@@ -124,13 +124,29 @@ package_content:
     content-type: "text/x-shellscript"
 """  # noqa: E501
 
+NAPD_YAML_BAD = """---
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/package-specification/napd-schema.yml"
+
+vendor_bad: "eu.5gtango"
+name: "ns-package-example"
+version: "0.1"
+package_type: "application/vnd.5gtango.package.nsp"  # MIME type of package, e.g., nsp, vnfp, tdp, trp
+maintainer: "Manuel Peuster, Paderborn University"
+release_date_time: "2018.01.01T10:00+03:00"          # IETF RFC3339
+description: "This is an example 5GTANGO network service package."
+logo: "Icons/upb_logo.png"                           # (optional) path to logo file (PNG or JPEG)
+"""  # noqa: E501
+
 
 class TngSdkPackageTangoPackagerTest(unittest.TestCase):
 
     def _create_wd(self,
                    tosca_meta_path="TOSCA-Metadata/TOSCA.meta",
                    etsi_mf_path="mynsd.mf",
-                   napd_path="TOSCA-Metadata/NAPD.yaml"):
+                   napd_path="TOSCA-Metadata/NAPD.yaml",
+                   tosca_meta_data=TOSCA_META,
+                   etsi_mf_data=ETSI_MF,
+                   napd_data=NAPD_YAML):
         """
         Creates temp. working directory.
         return: wd path
@@ -143,15 +159,15 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         # write TOSCA-Metadata file
         if tosca_meta_path is not None:
             with open(os.path.join(wd, tosca_meta_path), "w") as f:
-                f.write(TOSCA_META)
+                f.write(tosca_meta_data)
         # write ETSI manifest file
         if etsi_mf_path is not None:
             with open(os.path.join(wd, etsi_mf_path), "w") as f:
-                f.write(ETSI_MF)
+                f.write(etsi_mf_data)
         # write NAPD
         if napd_path is not None:
             with open(os.path.join(wd, napd_path), "w") as f:
-                f.write(NAPD_YAML)
+                f.write(napd_data)
         return wd
 
     def setUp(self):
@@ -171,7 +187,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(len(tosca_meta), 2)
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(len(etsi_mf), 7)
-        # TODO napd = self.p._read_napd(wd)
+        napd = self.p._read_napd(wd, tosca_meta)
+        self.assertIn("descriptor_schema", napd)
 
     def test_read_missing_metadata(self):
         # create malformed work environment
@@ -181,7 +198,19 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(tosca_meta, [{}])
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(etsi_mf, [{}])
-        # TODO napd = self.p._read_napd(wd)
+        napd = self.p._read_napd(wd, tosca_meta)
+        self.assertNotIn("descriptor_schema", napd)
+
+    def test_read_malformed_metadata(self):
+        # create malformed work environment
+        wd = self._create_wd(napd_data=NAPD_YAML_BAD)
+        # read metadata
+        tosca_meta = self.p._read_tosca_meta(wd)
+        self.assertEqual(len(tosca_meta), 2)
+        etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
+        self.assertEqual(len(etsi_mf), 7)
+        napd = self.p._read_napd(wd, tosca_meta)
+        self.assertNotIn("descriptor_schema", napd)
 
     def test_collect_metadata(self):
         pass
