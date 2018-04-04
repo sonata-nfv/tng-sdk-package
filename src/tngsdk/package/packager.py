@@ -43,6 +43,7 @@ import re
 import datetime
 import pprint
 from tngsdk.package.validator import validate_yaml_online
+from tngsdk.package.helper import dictionary_deep_merge
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -89,17 +90,37 @@ class NapdRecord(object):
         self.maintainer = None
         self.release_date_time = None
         self.metadata = dict()
+        self.package_content = list()
 
     def __repr__(self):
         return "NapdRecord({})".format(pprint.pformat(self.__dict__))
+
+    def find_package_content_entry(self, source):
+        for ce in self.package_content:
+            if ce.get("source") == source:
+                return ce
+        return None
 
     def update(self, data_dict):
         """
         Overwrites the values of this record
         using the values from the given dict.
         """
-        # TODO deep merge (e.g. package_content list)
-        self.__dict__.update(data_dict)
+        # deep merge
+        dictionary_deep_merge(
+            self.__dict__, data_dict, skip=["package_content"])
+        # deep merge individual items of package_content (if available)
+        if "package_content" in data_dict:
+            for ce in data_dict.get("package_content"):
+                if ("source" not in ce
+                        or "algorithm" not in ce
+                        or "hash" not in ce):
+                    continue  # skip incomplete entries
+                existing_ce = self.find_package_content_entry(ce.get("source"))
+                if existing_ce is not None:
+                    dictionary_deep_merge(existing_ce, ce)
+                else:  # additional entry
+                    self.package_content.append(ce)
 
 
 class PackagerManager(object):
@@ -294,7 +315,8 @@ class EtsiPackager(CsarBasePackager):
         if nr is None:
             nr = NapdRecord()
         # find package_type
-        nr.package_type = self._etsi_to_napd_package_type(etsi_mf)
+        if len(etsi_mf[0]) > 0:
+            nr.package_type = self._etsi_to_napd_package_type(etsi_mf)
         # select ETSI key prefix based on pkg.type
         prefix = "vnf"
         if nr.package_type == "application/vnd.etsi.package.nsp":
@@ -302,15 +324,16 @@ class EtsiPackager(CsarBasePackager):
         elif nr.package_type == "application/vnd.etsi.package.tdp":
             prefix = "test"
         # vendor, name, version = provider_id, product_name, package_version
-        nr.vendor = etsi_mf[0].get("{}_provider_id".format(prefix))
-        nr.name = etsi_mf[0].get("{}_product_name".format(prefix))
-        nr.version = etsi_mf[0].get("{}_package_version".format(prefix))
+        nr.vendor = etsi_mf[0].get("{}_provider_id".format(prefix), nr.vendor)
+        nr.name = etsi_mf[0].get("{}_product_name".format(prefix), nr.name)
+        nr.version = etsi_mf[0].get(
+            "{}_package_version".format(prefix), nr.version)
         # only overwrite maintainer if not set by TOSCA.meta
         if nr.maintainer is None:
             nr.maintainer = etsi_mf[0].get("{}_provider_id".format(prefix))
         # release_date_time = release_date_time
-        nr.release_date_time = nr.version = etsi_mf[0].get(
-            "{}_release_date_time".format(prefix))
+        nr.release_date_time = etsi_mf[0].get(
+            "{}_release_date_time".format(prefix), nr.release_date_time)
         # add package_content based on ETSI manifest blocks 1...n
         nr.package_content = self._etsi_to_napd_package_content(etsi_mf)
         # add raw ETSI manifest
@@ -335,7 +358,7 @@ class EtsiPackager(CsarBasePackager):
             pc = {"source": block.get("Source"),
                   "algorithm": block.get("Algorithm"),
                   "hash": block.get("Hash"),
-                  "content-type": None}  # TODO maybe guess MIME type here
+                  "content-type": None}  # TODO guess MIME type here
             result.append(pc)
         return result
 
@@ -439,12 +462,12 @@ class TangoPackager(EtsiPackager):
 
     def _do_unpackage(self):
         wd = extract_zip_file_to_temp(self.args.unpackage)
-        md = self.collect_metadata(wd)
+        napdr = self.collect_metadata(wd)
         # TODO work on extracted files
         # TODO clean up temporary files and folders
-        print(md)
+        print(napdr)
         assert(wd is not None)
-        assert(md is not None)
+        assert(napdr is not None)
         return {"error": None}
 
     def _do_package(self):

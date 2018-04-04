@@ -31,5 +31,34 @@
 # partner consortium (www.5gtango.eu).
 import logging
 import os
+import copy
 
 LOG = logging.getLogger(os.path.basename(__file__))
+
+
+def dictionary_deep_merge(d1, d2, skip=None):
+    """
+    Recursively merges dicts containing other dicts or lists.
+    Fills d1 with additional contents of d2.
+    d2 overwrites keys in d1
+
+    source: https://www.electricmonk.nl/log/2017/05/07/...
+    ... merging-two-python-dictionaries-by-deep-updating/
+    """
+    if skip is None:
+        skip = list()
+    for k, v in d2.items():
+        if k in skip:
+            continue
+        if type(v) == list:
+            if k not in d1:
+                d1[k] = copy.deepcopy(v)
+            else:
+                d1[k].extend(v)
+        elif type(v) == dict:
+            if k not in d1:
+                d1[k] = copy.deepcopy(v)
+            else:
+                dictionary_deep_merge(d1[k], v)
+        else:
+            d1[k] = copy.copy(v)
