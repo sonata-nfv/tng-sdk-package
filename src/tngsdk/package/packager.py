@@ -39,7 +39,12 @@ import tempfile
 import io
 import glob
 import yaml
+import re
+import datetime
+import pprint
+import pyrfc3339
 from tngsdk.package.validator import validate_yaml_online
+from tngsdk.package.helper import dictionary_deep_merge
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -62,6 +67,61 @@ class PkgStatus(object):
     RUNNING = "running"
     FAILED = "failed"
     DONE = "done"
+
+
+class NapdRecord(object):
+    """
+    This class represents a runtime version
+    of the NFV advanced package descriptor.
+    It is the unified data model on which the
+    package works.
+    It is generated from the original NAPD
+    YAML format but contains additional metadata,
+    namely pointers to raw TOSCA or ETSI metadata.
+    nr.metadata["tosca"] = [block0, block1 ...]
+    """
+    def __init__(self):
+        self.descriptor_schema = ("https://raw.githubusercontent.com"
+                                  + "/sonata-nfv/tng-schema/master/"
+                                  + "package-specification/napd-schema.yml")
+        self.vendor = None
+        self.name = None
+        self.version = None
+        self.package_type = None
+        self.maintainer = None
+        self.release_date_time = None
+        self.metadata = dict()
+        self.package_content = list()
+
+    def __repr__(self):
+        return "NapdRecord({})".format(pprint.pformat(self.__dict__))
+
+    def find_package_content_entry(self, source):
+        for ce in self.package_content:
+            if ce.get("source") == source:
+                return ce
+        return None
+
+    def update(self, data_dict):
+        """
+        Overwrites the values of this record
+        using the values from the given dict.
+        """
+        # deep merge
+        dictionary_deep_merge(
+            self.__dict__, data_dict, skip=["package_content"])
+        # deep merge individual items of package_content (if available)
+        if "package_content" in data_dict:
+            for ce in data_dict.get("package_content"):
+                if ("source" not in ce
+                        or "algorithm" not in ce
+                        or "hash" not in ce):
+                    continue  # skip incomplete entries
+                existing_ce = self.find_package_content_entry(ce.get("source"))
+                if existing_ce is not None:
+                    dictionary_deep_merge(existing_ce, ce)
+                else:  # additional entry
+                    self.package_content.append(ce)
 
 
 class PackagerManager(object):
@@ -192,6 +252,37 @@ class TestPackager(Packager):
 
 class CsarBasePackager(Packager):
 
+    def collect_metadata(self, wd):
+        LOG.debug("Collecting TOSCA CSAR meta data ...")
+        return self._update_nr_with_tosca(
+            self._read_tosca_meta(wd))
+
+    def _update_nr_with_tosca(self, tosca_meta, nr=None):
+        """
+        Creates a NapdRecord and fills it with TOSCA
+        meta data. Mapping/translation is done manually since many
+        required fields are not in TOSCA.
+        """
+        if nr is None:
+            nr = NapdRecord()
+        # TOSCA Created-By becomes vendor
+        nr.vendor = save_name(tosca_meta[0].get("Created-By"))
+        # TOSCA has no name field: Use UUID of process instead
+        nr.name = str(uuid.uuid4())[:8]
+        # TOSCA has no package version. Use 1.0
+        nr.version = "1.0"
+        # Package type = application/vnd.tosca.package
+        nr.package_type = "application/vnd.tosca.package"
+        # Maintainer = Created By
+        nr.maintainer = tosca_meta[0].get("Created-By")
+        # TOSCA has no create date/time: Use current time
+        nr.release_date_time = pyrfc3339.generate(
+            datetime.datetime.now(), accept_naive=True)
+        # add raw TOSCA metadata
+        nr.metadata["tosca"] = tosca_meta
+        # LOG.debug("Added TOSCA meta data to {}".format(nr))
+        return nr
+
     def _read_tosca_meta(self, wd):
         """
         Tries to find TOSCA.meta file.
@@ -210,6 +301,80 @@ class CsarBasePackager(Packager):
 
 
 class EtsiPackager(CsarBasePackager):
+
+    def collect_metadata(self, wd):
+        nr = super().collect_metadata(wd)
+        LOG.debug("Collecting ETSI manifest meta data ...")
+        etsi_mf = self._read_etsi_manifest(
+            wd, nr.metadata.get("tosca"))
+        # update nr with ETSI info
+        return self._update_nr_with_etsi(etsi_mf, nr)
+
+    def _update_nr_with_etsi(self, etsi_mf, nr=None):
+        """
+        Updates NR with data from ETSI manifest input.
+        """
+        if nr is None:
+            nr = NapdRecord()
+        # find package_type
+        if len(etsi_mf[0]) > 0:
+            nr.package_type = self._etsi_to_napd_package_type(etsi_mf)
+        # select ETSI key prefix based on pkg.type
+        prefix = "vnf"
+        if nr.package_type == "application/vnd.etsi.package.nsp":
+            prefix = "ns"
+        elif nr.package_type == "application/vnd.etsi.package.tdp":
+            prefix = "test"
+        # vendor, name, version = provider_id, product_name, package_version
+        nr.vendor = etsi_mf[0].get("{}_provider_id".format(prefix), nr.vendor)
+        nr.name = etsi_mf[0].get("{}_product_name".format(prefix), nr.name)
+        nr.version = etsi_mf[0].get(
+            "{}_package_version".format(prefix), nr.version)
+        # only overwrite maintainer if not set by TOSCA.meta
+        if nr.maintainer is None:
+            nr.maintainer = etsi_mf[0].get("{}_provider_id".format(prefix))
+        # release_date_time = release_date_time
+        nr.release_date_time = etsi_mf[0].get(
+            "{}_release_date_time".format(prefix), nr.release_date_time)
+        # add package_content based on ETSI manifest blocks 1...n
+        nr.package_content = self._etsi_to_napd_package_content(etsi_mf)
+        # add raw ETSI manifest
+        nr.metadata["etsi"] = etsi_mf
+        # LOG.debug("Added ETSI meta data to {}".format(nr))
+        return nr
+
+    def _etsi_to_napd_package_content(self, etsi_mf):
+        """
+        Translates block1 to blockN of ETSI MF to
+        NAPD-like package_content entries.
+        """
+        if len(etsi_mf) < 2:
+            return list()
+        result = list()
+        for i in range(1, len(etsi_mf)):
+            # translate block1 to blockN
+            block = etsi_mf[i]
+            if "Source" not in block or block.get("Source") is None:
+                LOG.warning("Skipping block in ETSI MF: {}".format(block))
+                continue
+            pc = {"source": block.get("Source"),
+                  "algorithm": block.get("Algorithm"),
+                  "hash": block.get("Hash"),
+                  "content-type": None}  # TODO guess MIME type here
+            result.append(pc)
+        return result
+
+    def _etsi_to_napd_package_type(self, etsi_mf):
+        """
+        Find package_type based on key names of block0.
+        """
+        for k, v in etsi_mf[0].items():
+            if "ns_" in k:
+                return "application/vnd.etsi.package.nsp"
+            elif "test_" in k:
+                return "application/vnd.etsi.package.tdp"
+        # default: assume VNF package
+        return "application/vnd.etsi.package.vnfp"
 
     def _read_etsi_manifest(self, wd, tosca_meta):
         """
@@ -242,6 +407,23 @@ class EtsiPackager(CsarBasePackager):
 
 
 class TangoPackager(EtsiPackager):
+
+    def collect_metadata(self, wd):
+        nr = super().collect_metadata(wd)
+        LOG.debug("Collecting 5GTANGO (NAPD) meta data ...")
+        napd = self._read_napd(
+            wd, nr.metadata.get("tosca"))
+        # update NR with NAPD data
+        return self._update_nr_with_napd(napd, nr)
+
+    def _update_nr_with_napd(self, napd, nr=None):
+        """
+        Updates NR with data from NAPD file input.
+        """
+        if nr is None:
+            nr = NapdRecord()
+        nr.update(napd)
+        return nr
 
     def _read_napd(self, wd, tosca_meta):
         """
@@ -280,26 +462,43 @@ class TangoPackager(EtsiPackager):
             LOG.error("Cannot read NAPD.yaml file: {}".format(e))
         return dict()  # TODO return an empty NAPD skeleton here
 
-    def _collect_metadata(self, wd):
-        tosca_meta = self._read_tosca_meta(wd)
-        etsi_mf = self._read_etsi_manifest(wd, tosca_meta)
-        napd = self._read_napd(wd, tosca_meta)
-        print(tosca_meta)
-        print(etsi_mf)
-        print(napd)
-        # TODO unify input metadata
-        # (this is non trivial! deduplicate information,
-        # the idea is to use a NAPD skeleton and fill its gaps)
-        return dict()
+    def _assert_usable_tango_package(self, napdr):
+        """
+        Assert that we have read enough information to have
+        a 'usable' 5GTANGO package at hand.
+        Where 'usable' means that the minimum set of fields
+        is available to let any 5GTANGO component work with the package
+        contents.
+        Contains hard-coded checks that might evolve over time.
+        Returns True/False
+        """
+        try:
+            # check for empty fields
+            assert(napdr.vendor is not None)
+            assert(napdr.name is not None)
+            assert(napdr.version is not None)
+            assert(napdr.package_type is not None)
+            assert(napdr.maintainer is not None)
+            assert(napdr.release_date_time is not None)
+            assert(len(napdr.metadata) > 0)
+            # check if date strings can be parsed
+            pyrfc3339.parse(napdr.release_date_time)
+            # TODO extend as needed
+        except AssertionError as e:
+            LOG.exception("Package is not a usable 5GTANGO package:")
+            return False
+        return True
 
     def _do_unpackage(self):
         wd = extract_zip_file_to_temp(self.args.unpackage)
-        md = self._collect_metadata(wd)
+        napdr = self.collect_metadata(wd)
+        r = self._assert_usable_tango_package(napdr)
+        assert(r)
         # TODO work on extracted files
         # TODO clean up temporary files and folders
-        print(md)
+        print(napdr)
         assert(wd is not None)
-        assert(md is not None)
+        assert(napdr is not None)
         return {"error": None}
 
     def _do_package(self):
@@ -374,7 +573,7 @@ def parse_block_based_meta_file(inputs):
                         .format(l, len(l)))
             return None, None
         key = str(prts.pop(0)).strip()  # first part is keys
-        value = (": ".join(prts)).strip()  # rest is value
+        value = (":".join(prts)).strip()  # rest is value
         return key, value
 
     blocks = list()
@@ -402,3 +601,14 @@ def parse_block_based_meta_file(inputs):
         LOG.warning("No blocks found in: {}".format(inputs))
         blocks.append(dict())
     return blocks
+
+
+def save_name(s):
+    """
+    Turns any string into a string
+    without spaces.
+    """
+    if s is None:
+        return None
+    s = re.sub(r"[^A-Za-z0-9 ]", "", s)
+    return s.replace(" ", "-")
