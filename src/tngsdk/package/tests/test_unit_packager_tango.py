@@ -239,6 +239,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         napdr = self.p.collect_metadata(wd)
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
+        # check content checksums
+        self.p._validate_package_content_checksums(napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "Manuel-Peuster-Paderborn-University")
@@ -260,6 +262,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         napdr = self.p.collect_metadata(wd)
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
+        # check content checksums
+        self.p._validate_package_content_checksums(napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")
@@ -294,6 +298,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         napdr = self.p.collect_metadata(wd)
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
+        # check content checksums
+        self.p._validate_package_content_checksums(napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")

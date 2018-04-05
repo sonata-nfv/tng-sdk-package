@@ -61,6 +61,12 @@ class MissingMetadataException(BaseException):
 class NapdNotValidException(BaseException):
     pass
 
+class MetadataValidationException(BaseException):
+    pass
+
+class ChecksumException(BaseException):
+    pass
+
 
 class PkgStatus(object):
     WAITING = "waiting"
@@ -405,6 +411,38 @@ class EtsiPackager(CsarBasePackager):
             LOG.error("Cannot read ETSI manifest file: {}".format(e))
         return [{}]
 
+    def _validate_package_content_checksums(self, napdr):
+        """
+        Validates the checksums of all entries in the
+        package_content list.
+        (if algorithm field is not given, nothing is checked)
+        Implemented on the ETSI level, because CSAR packages do
+        not have checksums to check.
+        """
+        # TODO: move to helper function validate_checksum(ce)
+        supported_algorithms = ["SHA-256", "SHA-128", "MD5"]
+        # iterate over all content files and check them
+        for ce in napdr.package_content:
+            # check and validate ce data
+            if "source" not in ce:
+                raise MissingMetadataException(
+                    "Malformed package_content entry: source field missing: {}"
+                    .format(ce))
+            if ce.get("algorithm") is None:
+                # warn and skip entry (a risk but makes things easier for now)
+                LOG.warning("Package content without checksum: {}".format(ce))
+                continue
+            if ce.get("algorithm") not in supported_algorithms:
+                raise ChecksumException("Unsupported algorithm: {}"
+                                        .format(ce.get("algorithm")))
+            if ce.get("algorithm") is not None and ce.get("hash") is None:
+                raise ChecksumException("Checksum missing: {}"
+                                        .format(ce))
+            # find file and compute checksum
+            # TODO
+            # compare checksums
+            # TODO
+
 
 class TangoPackager(EtsiPackager):
 
@@ -470,7 +508,7 @@ class TangoPackager(EtsiPackager):
         is available to let any 5GTANGO component work with the package
         contents.
         Contains hard-coded checks that might evolve over time.
-        Returns True/False
+        raises MetadataValidationException
         """
         try:
             # check for empty fields
@@ -484,17 +522,32 @@ class TangoPackager(EtsiPackager):
             # check if date strings can be parsed
             pyrfc3339.parse(napdr.release_date_time)
             # TODO extend as needed
+            return True
         except AssertionError as e:
-            LOG.exception("Package is not a usable 5GTANGO package:")
-            return False
-        return True
+            m = "Package metadata vailidation failed. Package unusable. Abort."
+            LOG.exception(m)
+            raise MetadataValidationException(m)
+        return False
 
     def _do_unpackage(self):
+        # extract package contents
         wd = extract_zip_file_to_temp(self.args.unpackage)
+        # collect metadata
         napdr = self.collect_metadata(wd)
-        r = self._assert_usable_tango_package(napdr)
-        assert(r)
-        # TODO work on extracted files
+        LOG.debug("Collected metadata: {}".format(napdr))
+        # validate metadata
+        try:
+            self._assert_usable_tango_package(napdr)
+        except MetadataValidationException as e:
+            LOG.error(e.message)
+            return {"error": e.message}
+        # validate checksums
+        try:
+            self._validate_package_content_checksums(napdr)
+        except ChecksumException as e:
+            LOG.error(e.message)
+            return {"error": e.message}
+    
         # TODO clean up temporary files and folders
         print(napdr)
         assert(wd is not None)
