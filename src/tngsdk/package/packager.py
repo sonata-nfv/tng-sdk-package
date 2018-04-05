@@ -42,6 +42,7 @@ import yaml
 import re
 import datetime
 import pprint
+import pyrfc3339
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.helper import dictionary_deep_merge
 
@@ -275,7 +276,8 @@ class CsarBasePackager(Packager):
         # Maintainer = Created By
         nr.maintainer = tosca_meta[0].get("Created-By")
         # TOSCA has no create date/time: Use current time
-        nr.release_date_time = str(datetime.datetime.now())
+        nr.release_date_time = pyrfc3339.generate(
+            datetime.datetime.now(), accept_naive=True)
         # add raw TOSCA metadata
         nr.metadata["tosca"] = tosca_meta
         # LOG.debug("Added TOSCA meta data to {}".format(nr))
@@ -460,9 +462,38 @@ class TangoPackager(EtsiPackager):
             LOG.error("Cannot read NAPD.yaml file: {}".format(e))
         return dict()  # TODO return an empty NAPD skeleton here
 
+    def _assert_usable_tango_package(self, napdr):
+        """
+        Assert that we have read enough information to have
+        a 'usable' 5GTANGO package at hand.
+        Where 'usable' means that the minimum set of fields
+        is available to let any 5GTANGO component work with the package
+        contents.
+        Contains hard-coded checks that might evolve over time.
+        Returns True/False
+        """
+        try:
+            # check for empty fields
+            assert(napdr.vendor is not None)
+            assert(napdr.name is not None)
+            assert(napdr.version is not None)
+            assert(napdr.package_type is not None)
+            assert(napdr.maintainer is not None)
+            assert(napdr.release_date_time is not None)
+            assert(len(napdr.metadata) > 0)
+            # check if date strings can be parsed
+            pyrfc3339.parse(napdr.release_date_time)
+            # TODO extend as needed
+        except AssertionError as e:
+            LOG.exception("Package is not a usable 5GTANGO package:")
+            return False
+        return True
+
     def _do_unpackage(self):
         wd = extract_zip_file_to_temp(self.args.unpackage)
         napdr = self.collect_metadata(wd)
+        r = self._assert_usable_tango_package(napdr)
+        assert(r)
         # TODO work on extracted files
         # TODO clean up temporary files and folders
         print(napdr)
@@ -542,7 +573,7 @@ def parse_block_based_meta_file(inputs):
                         .format(l, len(l)))
             return None, None
         key = str(prts.pop(0)).strip()  # first part is keys
-        value = (": ".join(prts)).strip()  # rest is value
+        value = (":".join(prts)).strip()  # rest is value
         return key, value
 
     blocks = list()

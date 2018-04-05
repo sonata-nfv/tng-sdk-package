@@ -53,7 +53,7 @@ Content-Type: application/vnd.5gtango.napd
 ETSI_MF = """ns_product_name: ns-package-example-etsi
 ns_provider_id: eu.5gtango
 ns_package_version: 0.1
-ns_release_date_time: 2018.01.01T10:00+03:00
+ns_release_date_time: 2009-01-01T10:01:02Z
 
 Source: Definitions/mynsd.yaml
 Algorithm: SHA-256
@@ -85,7 +85,7 @@ name: "ns-package-example-tango"
 version: "0.2"
 package_type: "application/vnd.5gtango.package.nsp"  # MIME type of package, e.g., nsp, vnfp, tdp, trp
 maintainer: "Manuel Peuster, Paderborn University"
-release_date_time: "2018.01.01T10:00+03:00"          # IETF RFC3339
+release_date_time: "2009-01-01T14:01:02-04:00"          # IETF RFC3339
 description: "This is an example 5GTANGO network service package."
 logo: "Icons/upb_logo.png"                           # (optional) path to logo file (PNG or JPEG)
 
@@ -128,7 +128,7 @@ name: "ns-package-example"
 version: "0.1"
 package_type: "application/vnd.5gtango.package.nsp"  # MIME type of package, e.g., nsp, vnfp, tdp, trp
 maintainer: "Manuel Peuster, Paderborn University"
-release_date_time: "2018.01.01T10:00+03:00"          # IETF RFC3339
+release_date_time: "2009-01-01T14:01:02-04:00"          # IETF RFC3339
 description: "This is an example 5GTANGO network service package."
 logo: "Icons/upb_logo.png"                           # (optional) path to logo file (PNG or JPEG)
 """  # noqa: E501
@@ -237,6 +237,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
                              napd_path=None)
         # collect available metadata
         napdr = self.p.collect_metadata(wd)
+        # check packager assertion methods
+        self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "Manuel-Peuster-Paderborn-University")
@@ -245,7 +247,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(napdr.package_type, "application/vnd.tosca.package")
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster (Paderborn University)")
-        self.assertEqual(len(napdr.release_date_time), 26)
+        self.assertEqual(len(napdr.release_date_time), 20)
         self.assertEqual(len(napdr.metadata), 2)
 
     def test_collect_metadata_etsi(self):
@@ -256,6 +258,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         wd = self._create_wd(napd_path=None)
         # collect available metadata
         napdr = self.p.collect_metadata(wd)
+        # check packager assertion methods
+        self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")
@@ -265,7 +269,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
                          "application/vnd.etsi.package.nsp")
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster (Paderborn University)")
-        self.assertEqual(len(napdr.release_date_time), 24)
+        self.assertEqual(len(napdr.release_date_time), 20)
         self.assertEqual(len(napdr.metadata), 2)
         self.assertEqual(len(napdr.package_content), 5)
         print(napdr.package_content)
@@ -288,6 +292,8 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         wd = self._create_wd()
         # collect available metadata
         napdr = self.p.collect_metadata(wd)
+        # check packager assertion methods
+        self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")
@@ -297,7 +303,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
                          "application/vnd.5gtango.package.nsp")
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster, Paderborn University")
-        self.assertEqual(len(napdr.release_date_time), 22)
+        self.assertEqual(len(napdr.release_date_time), 25)
         self.assertEqual(len(napdr.metadata), 2)
         self.assertEqual(len(napdr.package_content), 7)
         self.assertContentEntry(

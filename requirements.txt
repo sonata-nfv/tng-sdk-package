@@ -6,3 +6,4 @@ coloredlogs
 requests
 flask-restplus
 mock
+pyrfc3339

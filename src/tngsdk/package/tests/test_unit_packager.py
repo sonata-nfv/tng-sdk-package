@@ -57,7 +57,7 @@ class TngSdkPackagePackagerHelperTest(unittest.TestCase):
         # test case
         i = """
             Key1: Value1
-            Key2: Value2:Value
+            Key2: Value2: Value
             """
         b = parse_block_based_meta_file(i)
         self.assertEqual(len(b), 1)
