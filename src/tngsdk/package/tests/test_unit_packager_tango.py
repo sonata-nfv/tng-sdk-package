@@ -57,23 +57,23 @@ ns_release_date_time: 2009-01-01T10:01:02Z
 
 Source: Definitions/mynsd.yaml
 Algorithm: SHA-256
-Hash: feb97301a80166c076cf0d639a4c0f13a93f87585496a054bf3dd61f6a9a6f02
+Hash: f3a6484ea45b1605a2142cf29066d57d84dbeb58fd7ae2e06b729bcaf19b1701
 
 Source: Definitions/myvnfd.yaml
 Algorithm: SHA-256
-Hash: a8ecb3b378c5d4c40f8a8d8afb1870e6119231f10fab3e7c6e1dd96c38b87d93
+Hash: 3fefae6c2402f14a0ae4af8eeb5cd4d6e2c77d4ddcbdeb173c04de0e41a719f5
 
 Source: Icons/upb_logo.png
 Algorithm: SHA-256
-Hash: dd83757e632740f9f390af15eeb8bc25480a0c412c7ea9ac9abbb0e5e025e508
+Hash: 3598ce6f965b2481fe26316c06b30950c46ac7f8e7229f104aa78f579997668d
 
 Source: Images/somecloudimage.ref
 Algorithm: SHA-256
-Hash: 54cb482d72b9f454aec9197c91310273f1406ed7b62c938ebe1cf1c271b7f522
+Hash: 4bb0d5728545737558a159e7bcdfa087baec5b0d7494ad175185f2b4a370c3f1
 
 Source: Scripts/cloud.init
 Algorithm: SHA-256
-Hash: e16360cc3518bde752ac2d506e6bdb6bcb6638a0f94df9ea06975ae910204277
+Hash: 45149c9a7fb7addd14809694f4671629577a169ccc6d217fc362a90c4510ce3e
 """  # noqa: E501
 
 
@@ -92,31 +92,31 @@ logo: "Icons/upb_logo.png"                           # (optional) path to logo f
 package_content:
   - source: "Definitions/mynsd.yaml"
     algorithm: "SHA-256"
-    hash: "feb97301a80166c076cf0d639a4c0f13a93f87585496a054bf3dd61f6a9a6f02"
+    hash: "f3a6484ea45b1605a2142cf29066d57d84dbeb58fd7ae2e06b729bcaf19b1701"
     content-type: "application/vnd.5gtango.nsd"
     tags:  # (optional)
       - "eu.5gtango"
   - source: "Definitions/myvnfd.yaml"
     algorithm: "SHA-256"
-    hash: "a8ecb3b378c5d4c40f8a8d8afb1870e6119231f10fab3e7c6e1dd96c38b87d93"
+    hash: "3fefae6c2402f14a0ae4af8eeb5cd4d6e2c77d4ddcbdeb173c04de0e41a719f5"
     content-type: "application/vnd.5gtango.vnfd"
     tags:  # (optional)
       - "eu.5gtango"
   - source: "Icons/upb_logo.png"
     algorithm: "SHA-256"
-    hash: "dd83757e632740f9f390af15eeb8bc25480a0c412c7ea9ac9abbb0e5e025e508"
+    hash: "3598ce6f965b2481fe26316c06b30950c46ac7f8e7229f104aa78f579997668d"
     content-type: "image/png"
   - source: "Images/mycloudimage.ref"
     algorithm: "SHA-256"
-    hash: "54cb482d72b9f454aec9197c91310273f1406ed7b62c938ebe1cf1c271b7f522"
+    hash: "5dd49f783fc40107e538904772e96ce7d13d324d8973288ca4836f7c06d430e7"
     content-type: "application/vnd.5gtango.ref"
   - source: "Licenses/LICENSE"
     algorithm: "SHA-256"
-    hash: "179f180ea1630016d585ff32321037b18972d389be0518c0192021286c4898ca"
+    hash: "256114aa091db22bd799f756d4501a979e5235e3e02bc7319995d97a9ff43925"
     content-type: "text/plain"
   - source: "Scripts/cloud.init"
     algorithm: "SHA-256"
-    hash: "e16360cc3518bde752ac2d506e6bdb6bcb6638a0f94df9ea06975ae910204277"
+    hash: "45149c9a7fb7addd14809694f4671629577a169ccc6d217fc362a90c4510ce3e"
     content-type: "text/x-shellscript"
 """  # noqa: E501
 
@@ -152,19 +152,32 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         # create folder structure
         os.mkdir(os.path.join(wd, "TOSCA-Metadata"))
         os.mkdir(os.path.join(wd, "Definitions"))
+        os.mkdir(os.path.join(wd, "Icons"))
+        os.mkdir(os.path.join(wd, "Images"))
+        os.mkdir(os.path.join(wd, "Scripts"))
+        os.mkdir(os.path.join(wd, "Licenses"))
         # write TOSCA-Metadata file
         if tosca_meta_path is not None:
-            with open(os.path.join(wd, tosca_meta_path), "w") as f:
-                f.write(tosca_meta_data)
+            self._create_file(wd, tosca_meta_path, tosca_meta_data)
         # write ETSI manifest file
         if etsi_mf_path is not None:
-            with open(os.path.join(wd, etsi_mf_path), "w") as f:
-                f.write(etsi_mf_data)
+            self._create_file(wd, etsi_mf_path, etsi_mf_data)
         # write NAPD
         if napd_path is not None:
-            with open(os.path.join(wd, napd_path), "w") as f:
-                f.write(napd_data)
+            self._create_file(wd, napd_path, napd_data)
+        # create additional files
+        self._create_file(wd, "Definitions/mynsd.yaml", "mynsd")
+        self._create_file(wd, "Definitions/myvnfd.yaml", "myvnfd")
+        self._create_file(wd, "Icons/upb_logo.png", "logo")
+        self._create_file(wd, "Images/somecloudimage.ref", "somecloudimage")
+        self._create_file(wd, "Scripts/cloud.init", "cloudinit")
+        self._create_file(wd, "Images/mycloudimage.ref", "mycloudimage")
+        self._create_file(wd, "Licenses/LICENSE", "licsens")
         return wd
+
+    def _create_file(self, wd, path, data):
+        with open(os.path.join(wd, path), "w") as f:
+                f.write(data)
 
     def findConentEntry(self, napdr, source):
         for c in napdr.package_content:
@@ -240,7 +253,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check content checksums
-        self.p._validate_package_content_checksums(napdr)
+        self.p._validate_package_content_checksums(wd, napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "Manuel-Peuster-Paderborn-University")
@@ -263,7 +276,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check content checksums
-        self.p._validate_package_content_checksums(napdr)
+        self.p._validate_package_content_checksums(wd, napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")
@@ -299,7 +312,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         # check packager assertion methods
         self.assertTrue(self.p._assert_usable_tango_package(napdr))
         # check content checksums
-        self.p._validate_package_content_checksums(napdr)
+        self.p._validate_package_content_checksums(wd, napdr)
         # check collected metadata
         self.assertIsNotNone(napdr)
         self.assertEqual(napdr.vendor, "eu.5gtango")

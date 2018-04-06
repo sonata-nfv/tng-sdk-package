@@ -43,6 +43,7 @@ import re
 import datetime
 import pprint
 import pyrfc3339
+import hashlib
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.helper import dictionary_deep_merge
 
@@ -61,8 +62,10 @@ class MissingMetadataException(BaseException):
 class NapdNotValidException(BaseException):
     pass
 
+
 class MetadataValidationException(BaseException):
     pass
+
 
 class ChecksumException(BaseException):
     pass
@@ -411,7 +414,7 @@ class EtsiPackager(CsarBasePackager):
             LOG.error("Cannot read ETSI manifest file: {}".format(e))
         return [{}]
 
-    def _validate_package_content_checksums(self, napdr):
+    def _validate_package_content_checksums(self, wd, napdr):
         """
         Validates the checksums of all entries in the
         package_content list.
@@ -420,7 +423,7 @@ class EtsiPackager(CsarBasePackager):
         not have checksums to check.
         """
         # TODO: move to helper function validate_checksum(ce)
-        supported_algorithms = ["SHA-256", "SHA-128", "MD5"]
+        supported_algorithms = ["SHA-256", "SHA-1", "MD5"]
         # iterate over all content files and check them
         for ce in napdr.package_content:
             # check and validate ce data
@@ -438,10 +441,33 @@ class EtsiPackager(CsarBasePackager):
             if ce.get("algorithm") is not None and ce.get("hash") is None:
                 raise ChecksumException("Checksum missing: {}"
                                         .format(ce))
+            # select hash function
+            h_func = hashlib.md5  # default
+            if ce.get("algorithm") == "SHA-256":
+                h_func = hashlib.sha256
+            if ce.get("algorithm") == "SHA-1":
+                h_func = hashlib.sha1
             # find file and compute checksum
-            # TODO
+            path = search_for_file(os.path.join(wd, ce.get("source")))
+            # check if file exists
+            if path is None:
+                raise ChecksumException("File not found: {}".format(
+                    ce.get("source")))
+            if not os.path.isfile(path):
+                raise ChecksumException("File not found: {}".format(path))
+            # try to compute the files checksum
+            try:
+                h_file = file_hash(path, h_func)
+            except BaseException as e:
+                msg = "Coudn't compute file hash {}".format(path)
+                LOG.exeception(msg)
+                raise ChecksumException(msg)
             # compare checksums
-            # TODO
+            if h_file != ce.get("hash"):
+                msg = "Checksum mismatch! {}({}) != napdr({})".format(
+                    ce.get("source"), h_file, ce.get("hash"))
+                LOG.error(msg)
+                raise ChecksumException(msg)
 
 
 class TangoPackager(EtsiPackager):
@@ -543,11 +569,11 @@ class TangoPackager(EtsiPackager):
             return {"error": e.message}
         # validate checksums
         try:
-            self._validate_package_content_checksums(napdr)
+            self._validate_package_content_checksums(wd, napdr)
         except ChecksumException as e:
             LOG.error(e.message)
             return {"error": e.message}
-    
+
         # TODO clean up temporary files and folders
         print(napdr)
         assert(wd is not None)
@@ -665,3 +691,11 @@ def save_name(s):
         return None
     s = re.sub(r"[^A-Za-z0-9 ]", "", s)
     return s.replace(" ", "-")
+
+
+def file_hash(path, h_func=hashlib.sha256):
+    h = h_func()
+    with open(path, 'rb', buffering=0) as f:
+        for b in iter(lambda: f.read(128 * 1024), b''):
+            h.update(b)
+    return h.hexdigest()
