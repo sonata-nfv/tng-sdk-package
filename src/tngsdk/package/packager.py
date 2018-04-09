@@ -422,8 +422,6 @@ class EtsiPackager(CsarBasePackager):
         Implemented on the ETSI level, because CSAR packages do
         not have checksums to check.
         """
-        # TODO: move to helper function validate_checksum(ce)
-        supported_algorithms = ["SHA-256", "SHA-1", "MD5"]
         # iterate over all content files and check them
         for ce in napdr.package_content:
             # check and validate ce data
@@ -435,39 +433,13 @@ class EtsiPackager(CsarBasePackager):
                 # warn and skip entry (a risk but makes things easier for now)
                 LOG.warning("Package content without checksum: {}".format(ce))
                 continue
-            if ce.get("algorithm") not in supported_algorithms:
-                raise ChecksumException("Unsupported algorithm: {}"
-                                        .format(ce.get("algorithm")))
             if ce.get("algorithm") is not None and ce.get("hash") is None:
                 raise ChecksumException("Checksum missing: {}"
                                         .format(ce))
-            # select hash function
-            h_func = hashlib.md5  # default
-            if ce.get("algorithm") == "SHA-256":
-                h_func = hashlib.sha256
-            if ce.get("algorithm") == "SHA-1":
-                h_func = hashlib.sha1
-            # find file and compute checksum
+            # find file
             path = search_for_file(os.path.join(wd, ce.get("source")))
-            # check if file exists
-            if path is None:
-                raise ChecksumException("File not found: {}".format(
-                    ce.get("source")))
-            if not os.path.isfile(path):
-                raise ChecksumException("File not found: {}".format(path))
-            # try to compute the files checksum
-            try:
-                h_file = file_hash(path, h_func)
-            except BaseException as e:
-                msg = "Coudn't compute file hash {}".format(path)
-                LOG.exeception(msg)
-                raise ChecksumException(msg)
-            # compare checksums
-            if h_file != ce.get("hash"):
-                msg = "Checksum mismatch! {}({}) != napdr({})".format(
-                    ce.get("source"), h_file, ce.get("hash"))
-                LOG.error(msg)
-                raise ChecksumException(msg)
+            # validate checksum
+            validate_file_checksum(path, ce.get("algorithm"), ce.get("hash"))
 
 
 class TangoPackager(EtsiPackager):
@@ -509,6 +481,9 @@ class TangoPackager(EtsiPackager):
                     # try 2:
                     path = search_for_file(
                         os.path.join(wd, "**/NAPD.yaml"), recursive=False)
+            else:
+                raise MissingMetadataException(
+                    "Cannot find TOSCA meta data.")
             if path is None:
                 raise MissingMetadataException(
                     "Cannot find NAPD.yaml file.")
@@ -524,6 +499,7 @@ class TangoPackager(EtsiPackager):
                     "Validation of {} failed.".format(path))
         except BaseException as e:
             LOG.error("Cannot read NAPD.yaml file: {}".format(e))
+            raise e
         return dict()  # TODO return an empty NAPD skeleton here
 
     def _assert_usable_tango_package(self, napdr):
@@ -555,24 +531,29 @@ class TangoPackager(EtsiPackager):
             raise MetadataValidationException(m)
         return False
 
-    def _do_unpackage(self):
+    def _do_unpackage(self, wd=None):
         # extract package contents
-        wd = extract_zip_file_to_temp(self.args.unpackage)
+        if wd is None:
+            wd = extract_zip_file_to_temp(self.args.unpackage)
         # collect metadata
-        napdr = self.collect_metadata(wd)
-        LOG.debug("Collected metadata: {}".format(napdr))
+        try:
+            napdr = self.collect_metadata(wd)
+        except BaseException as e:
+            LOG.error(str(e))
+            return {"error": str(e)}
+        # LOG.debug("Collected metadata: {}".format(napdr))
         # validate metadata
         try:
             self._assert_usable_tango_package(napdr)
         except MetadataValidationException as e:
-            LOG.error(e.message)
-            return {"error": e.message}
+            LOG.error(str(e))
+            return {"error": str(e)}
         # validate checksums
         try:
             self._validate_package_content_checksums(wd, napdr)
         except ChecksumException as e:
-            LOG.error(e.message)
-            return {"error": e.message}
+            LOG.error(str(e))
+            return {"error": str(e)}
 
         # TODO clean up temporary files and folders
         print(napdr)
@@ -699,3 +680,41 @@ def file_hash(path, h_func=hashlib.sha256):
         for b in iter(lambda: f.read(128 * 1024), b''):
             h.update(b)
     return h.hexdigest()
+
+
+def validate_file_checksum(path, algorithm, hash_str):
+    """
+    Validate checksum of given file.
+    Raises ChecksumException
+    """
+    supported_algorithms = ["SHA-256", "SHA-1", "MD5"]
+    if algorithm not in supported_algorithms:
+        raise ChecksumException("Unsupported algorithm: {}"
+                                .format(algorithm))
+    if hash_str is None or len(hash_str) < 1:
+        raise ChecksumException("Cannot validate empty hash: {}"
+                                .format(hash_str))
+    # select hash function
+    h_func = hashlib.md5  # default
+    if algorithm == "SHA-256":
+        h_func = hashlib.sha256
+    if algorithm == "SHA-1":
+        h_func = hashlib.sha1
+    # check if file exists
+    if path is None or not os.path.isfile(path):
+        raise ChecksumException("File not found: {}"
+                                .format(path))
+    # try to compute the files checksum
+    try:
+        h_file = file_hash(path, h_func)
+    except BaseException as e:
+        msg = "Coudn't compute file hash {}".format(path)
+        LOG.exeception(msg)
+        raise ChecksumException(msg)
+    # compare checksums
+    if h_file != hash_str:
+        msg = "Checksum mismatch! {}({}) != napdr({})".format(
+            path, h_file, hash_str)
+        LOG.error(msg)
+        raise ChecksumException(msg)
+

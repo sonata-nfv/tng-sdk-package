@@ -133,6 +133,49 @@ description: "This is an example 5GTANGO network service package."
 logo: "Icons/upb_logo.png"                           # (optional) path to logo file (PNG or JPEG)
 """  # noqa: E501
 
+NAPD_YAML_BAD_CHECKSUM = """---
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/package-specification/napd-schema.yml"
+
+vendor: "eu.5gtango"
+name: "ns-package-example-tango"
+version: "0.2"
+package_type: "application/vnd.5gtango.package.nsp"  # MIME type of package, e.g., nsp, vnfp, tdp, trp
+maintainer: "Manuel Peuster, Paderborn University"
+release_date_time: "2009-01-01T14:01:02-04:00"          # IETF RFC3339
+description: "This is an example 5GTANGO network service package."
+logo: "Icons/upb_logo.png"                           # (optional) path to logo file (PNG or JPEG)
+
+package_content:
+  - source: "Definitions/mynsd.yaml"
+    algorithm: "SHA-256"
+    hash: "f3a6484ea45b1605a2142cf29066d57d84dbeb58fd7ae2e06b729bcaf19b1701"
+    content-type: "application/vnd.5gtango.nsd"
+    tags:  # (optional)
+      - "eu.5gtango"
+  - source: "Definitions/myvnfd.yaml"
+    algorithm: "SHA-256"
+    hash: "3fefae6c2402f14a0ae4af8eeb5cd4d6e2c77d4ddcbdeb173c04de0e41a719f5"
+    content-type: "application/vnd.5gtango.vnfd"
+    tags:  # (optional)
+      - "eu.5gtango"
+  - source: "Icons/upb_logo.png"
+    algorithm: "SHA-256"
+    hash: "3598ce6f965b2481fe26316c06b30950c46ac7f8e7229f104aa78f579997668d"
+    content-type: "image/png"
+  - source: "Images/mycloudimage.ref"
+    algorithm: "SHA-256"
+    hash: "5dd49f783fc40107e538904772e96ce7d13d324d8973288ca4836f7c06d430e7X"
+    content-type: "application/vnd.5gtango.ref"
+  - source: "Licenses/LICENSE"
+    algorithm: "SHA-256"
+    hash: "256114aa091db22bd799f756d4501a979e5235e3e02bc7319995d97a9ff43925"
+    content-type: "text/plain"
+  - source: "Scripts/cloud.init"
+    algorithm: "SHA-256"
+    hash: "45149c9a7fb7addd14809694f4671629577a169ccc6d217fc362a90c4510ce3e"
+    content-type: "text/x-shellscript"
+"""  # noqa: E501
+
 
 class TngSdkPackageTangoPackagerTest(unittest.TestCase):
 
@@ -347,8 +390,33 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
             self.findConentEntry(napdr, "Scripts/cloud.init"),
             content_type="text/x-shellscript")
 
-    def test_do_unpackage(self):
-        pass
+    def test_do_unpackage_good_package(self):
+        wd = self._create_wd()
+        r = self.p._do_unpackage(wd=wd)
+        self.assertIn("error", r)
+        self.assertIsNone(r.get("error"))
+
+    def test_do_unpackage_bad_checksum(self):
+        wd = self._create_wd(napd_data=NAPD_YAML_BAD_CHECKSUM)
+        r = self.p._do_unpackage(wd=wd)
+        self.assertIn("error", r)
+        self.assertIsNotNone(r.get("error"))
+        self.assertIn("Checksum mismatch!", r.get("error"))
+
+    def test_do_unpackage_bad_metadata(self):
+        wd = self._create_wd(napd_data=NAPD_YAML_BAD)
+        r = self.p._do_unpackage(wd=wd)
+        self.assertIn("error", r)
+        self.assertIsNotNone(r.get("error"))
+        self.assertIn("Validation of", r.get("error"))
+        self.assertIn("failed", r.get("error"))
+
+    def test_do_unpackage_missing_file(self):
+        wd = self._create_wd(tosca_meta_path=None)
+        r = self.p._do_unpackage(wd=wd)
+        self.assertIn("error", r)
+        self.assertIsNotNone(r.get("error"))
+        self.assertIn("Cannot find TOSCA meta data.", r.get("error"))
 
     def test_do_package(self):
         pass
