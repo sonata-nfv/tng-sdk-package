@@ -59,6 +59,10 @@ class MissingMetadataException(BaseException):
     pass
 
 
+class MissingFileException(BaseException):
+    pass
+
+
 class NapdNotValidException(BaseException):
     pass
 
@@ -438,6 +442,10 @@ class EtsiPackager(CsarBasePackager):
                                         .format(ce))
             # find file
             path = search_for_file(os.path.join(wd, ce.get("source")))
+            if path is None:
+                raise MissingFileException(
+                    "Checksum: File not found: {}".format(
+                        os.path.join(wd, ce.get("source"))))
             # validate checksum
             validate_file_checksum(path, ce.get("algorithm"), ce.get("hash"))
 
@@ -557,6 +565,9 @@ class TangoPackager(EtsiPackager):
         except ChecksumException as e:
             LOG.error(str(e))
             return {"error": str(e)}
+        except MissingFileException as e:
+            LOG.error(str(e))
+            return {"error": str(e)}
 
         # TODO clean up temporary files and folders
         print(napdr)
@@ -629,12 +640,12 @@ def fuzzy_find_wd(wd):
     into the root of the archive.
     This function tries to find the 'real' root of the
     extracted package directory and returns it.
-    Detection is done by 'Definitions' folder.
+    Detection is done by 'TOSCA-Metadata' folder.
     """
-    found_path = search_for_file(os.path.join(wd, "**/Definitions"))
+    found_path = search_for_file(os.path.join(wd, "**/TOSCA-Metadata"))
     if found_path is None:
         return wd
-    wd_root = found_path.replace("Definitions", "").strip()
+    wd_root = found_path.replace("TOSCA-Metadata", "").strip()
     if wd_root != wd:
         LOG.warning("Fuzzy found WD root: {}".format(wd_root))
     return wd_root
@@ -723,7 +734,7 @@ def validate_file_checksum(path, algorithm, hash_str):
         h_func = hashlib.sha1
     # check if file exists
     if path is None or not os.path.isfile(path):
-        raise ChecksumException("File not found: {}"
+        raise ChecksumException("Checksum: File not found: {}"
                                 .format(path))
     # try to compute the files checksum
     try:
@@ -738,4 +749,3 @@ def validate_file_checksum(path, algorithm, hash_str):
             path, h_file, hash_str)
         LOG.error(msg)
         raise ChecksumException(msg)
-
