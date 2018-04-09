@@ -281,8 +281,14 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(len(tosca_meta), 2)
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(len(etsi_mf), 6)
-        napd = self.p._read_napd(wd, tosca_meta)
-        self.assertNotIn("descriptor_schema", napd)
+        msg = None
+        try:
+            self.p._read_napd(wd, tosca_meta)
+        except BaseException as e:
+            msg = str(e)
+        self.assertIsNotNone(msg)
+        self.assertIn("Validation of", msg)
+        self.assertIn("failed", msg)
 
     def test_collect_metadata_csar(self):
         """
@@ -416,7 +422,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         r = self.p._do_unpackage(wd=wd)
         self.assertIn("error", r)
         self.assertIsNotNone(r.get("error"))
-        self.assertIn("Cannot find TOSCA meta data.", r.get("error"))
+        self.assertIn("Package metadata vailidation failed.", r.get("error"))
 
     def test_do_package(self):
         pass

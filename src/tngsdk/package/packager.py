@@ -470,6 +470,7 @@ class TangoPackager(EtsiPackager):
         Returns valid NAPD schema formatted dict.
         """
         try:
+            path = None
             if (tosca_meta is not None
                     and len(tosca_meta) > 1):
                 # try 1:
@@ -481,12 +482,9 @@ class TangoPackager(EtsiPackager):
                     # try 2:
                     path = search_for_file(
                         os.path.join(wd, "**/NAPD.yaml"), recursive=False)
-            else:
-                raise MissingMetadataException(
-                    "Cannot find TOSCA meta data.")
             if path is None:
-                raise MissingMetadataException(
-                    "Cannot find NAPD.yaml file.")
+                LOG.warning("Couldn't find NAPD file: {}".format(wd))
+                return dict()  # TODO return an empty NAPD skeleton here
             with open(path, "r") as f:
                 data = yaml.load(f)
                 if self.args.offline:
@@ -497,9 +495,12 @@ class TangoPackager(EtsiPackager):
                     return data
                 raise NapdNotValidException(
                     "Validation of {} failed.".format(path))
+        except NapdNotValidException as e:
+            LOG.error("Validation error: {}".format(e))
+            raise e
         except BaseException as e:
             LOG.error("Cannot read NAPD.yaml file: {}".format(e))
-            raise e
+            # raise e
         return dict()  # TODO return an empty NAPD skeleton here
 
     def _assert_usable_tango_package(self, napdr):
@@ -535,6 +536,8 @@ class TangoPackager(EtsiPackager):
         # extract package contents
         if wd is None:
             wd = extract_zip_file_to_temp(self.args.unpackage)
+        # fuzzy find right wd path
+        wd = fuzzy_find_wd(wd)
         # collect metadata
         try:
             napdr = self.collect_metadata(wd)
@@ -617,6 +620,24 @@ def search_for_file(path="**/TOSCA.meta", recursive=True):
     if len(f_lst) > 0:
         return f_lst[0]
     return None
+
+
+def fuzzy_find_wd(wd):
+    """
+    Zip files often contain a kind of
+    'root' folder, instead of placing the files themselves
+    into the root of the archive.
+    This function tries to find the 'real' root of the
+    extracted package directory and returns it.
+    Detection is done by 'Definitions' folder.
+    """
+    found_path = search_for_file(os.path.join(wd, "**/Definitions"))
+    if found_path is None:
+        return wd
+    wd_root = found_path.replace("Definitions", "").strip()
+    if wd_root != wd:
+        LOG.warning("Fuzzy found WD root: {}".format(wd_root))
+    return wd_root
 
 
 def parse_block_based_meta_file(inputs):
