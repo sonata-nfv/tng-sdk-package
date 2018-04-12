@@ -51,8 +51,16 @@ class TngSdkPackageCliTest(unittest.TestCase):
             ["-u", "misc/5gtango-ns-package-example.tgo",
              "-o", tempdir])
         r = cli.dispatch(args)
-        self.assertIn("error", r)
-        self.assertIsNone(r.get("error"))
+        self.assertIsNone(r.error)
+        shutil.rmtree(tempdir)
+
+    def test_cli_unpackage_invalid(self):
+        tempdir = tempfile.mkdtemp()
+        args = cli.parse_args(
+            ["-u", "misc/5gtango-ns-package-example-malformed.tgo",
+             "-o", tempdir])
+        r = cli.dispatch(args)
+        self.assertIsNotNone(r.error)
         shutil.rmtree(tempdir)
 
     def test_cli_package(self):
