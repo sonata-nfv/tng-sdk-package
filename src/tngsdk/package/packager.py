@@ -122,7 +122,7 @@ class NapdRecord(object):
 
     @property
     def pkg_id(self):
-        pass # TODO
+        pass  # TODO
 
     def update(self, data_dict):
         """

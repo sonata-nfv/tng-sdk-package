@@ -61,7 +61,11 @@ class PackageOnChange(Resource):
     @api.response(200, "OK")
     @api.response(400, "Bad request")
     def post(self, **kwargs):
+        print("")
+        print("+" * 70)
         print(request.data)
+        print("+" * 70)
+        print("")
 
 
 if __name__ == "__main__":

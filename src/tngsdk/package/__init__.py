@@ -65,4 +65,6 @@ def main():
         rest.serve_forever(args)
     else:
         # run package in CLI mode
-        cli.dispatch(args)
+        r = cli.dispatch(args)
+        if r.error is not None:
+            exit(1)  # exit with error code
