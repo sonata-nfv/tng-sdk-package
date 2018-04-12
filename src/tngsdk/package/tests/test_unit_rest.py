@@ -70,6 +70,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.patcher.start()
         # configure flask
         app.config['TESTING'] = True
+        app.cliargs = None
         self.app = app.test_client()
 
     def tearDown(self):

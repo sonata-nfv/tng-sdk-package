@@ -72,6 +72,7 @@ def serve_forever(args, debug=True):
     Start REST API server. Blocks.
     """
     # TODO replace this with WSGIServer for better performance
+    app.cliargs = args
     app.run(host=args.service_address,
             port=args.service_port,
             debug=debug)
@@ -143,7 +144,7 @@ def on_unpackaging_done(packager):
     Callback function for packaging procedure.
     """
     LOG.info("{}: Unpackaging using {} error: {}".format(
-        packager.status.upper(), packager, packager.result.get("error")))
+        packager.status.upper(), packager, packager.result.error))
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
@@ -151,7 +152,7 @@ def on_unpackaging_done(packager):
     # build callback payload
     pl = {"package_id": "",
           "package_location": "",
-          "package_metadata": packager.result,
+          "package_metadata": packager.result.to_dict(),
           "package_process_status": str(packager.status),
           "package_process_uuid": str(packager.uuid)}
     # perform callback request
@@ -197,7 +198,13 @@ class Packages(Resource):
         temppkg_path = _write_to_temp_file(args.package)
         args.package = None
         args.unpackage = temppkg_path
-        p = PM.new_packager(args)  # TODO pass args to packager
+        # pass CLI args to REST args
+        if app.cliargs is not None:
+            args.offline = app.cliargs.offline
+            args.no_cecksums = app.cliargs.no_checksums
+            args.no_autoversion = app.cliargs.no_autoversion
+        # instantiate packager
+        p = PM.new_packager(args)
         try:
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:

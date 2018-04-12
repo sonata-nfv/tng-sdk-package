@@ -399,30 +399,25 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
     def test_do_unpackage_good_package(self):
         wd = self._create_wd()
         r = self.p._do_unpackage(wd=wd)
-        self.assertIn("error", r)
-        self.assertIsNone(r.get("error"))
+        self.assertIsNone(r.error)
 
     def test_do_unpackage_bad_checksum(self):
         wd = self._create_wd(napd_data=NAPD_YAML_BAD_CHECKSUM)
         r = self.p._do_unpackage(wd=wd)
-        self.assertIn("error", r)
-        self.assertIsNotNone(r.get("error"))
-        self.assertIn("Checksum mismatch!", r.get("error"))
+        self.assertIsNotNone(r.error)
+        self.assertIn("Checksum mismatch!", r.error)
 
     def test_do_unpackage_bad_metadata(self):
         wd = self._create_wd(napd_data=NAPD_YAML_BAD)
         r = self.p._do_unpackage(wd=wd)
-        self.assertIn("error", r)
-        self.assertIsNotNone(r.get("error"))
-        self.assertIn("Validation of", r.get("error"))
-        self.assertIn("failed", r.get("error"))
+        self.assertIsNotNone(r.error)
+        self.assertIn("failed", r.error)
 
     def test_do_unpackage_missing_file(self):
         wd = self._create_wd(tosca_meta_path=None)
         r = self.p._do_unpackage(wd=wd)
-        self.assertIn("error", r)
-        self.assertIsNotNone(r.get("error"))
-        self.assertIn("Package metadata vailidation failed.", r.get("error"))
+        self.assertIsNotNone(r.error)
+        self.assertIn("Package metadata vailidation failed.", r.error)
 
     def test_do_package(self):
         pass

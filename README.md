@@ -55,7 +55,7 @@ TODO (e.g. link to wiki page)
 tng-package -u misc/5gtango-ns-package-example.tgo -o /tmp -v
 
 # unpack invalid package
-tng-package -u misc/5gtango-ns-package-example.tgo -o /tmp -v
+tng-package -u 5gtango-ns-package-example-malformed.tgo -o /tmp -v
 ```
 
 ### REST Mode

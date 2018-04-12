@@ -51,6 +51,7 @@ def dispatch(args):
     else:
         p.unpackage()
     LOG.debug("Packager result: {}".format(p.result))
+    # TODO display a nice result screen
     return p.result
 
 

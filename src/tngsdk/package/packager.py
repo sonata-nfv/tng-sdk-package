@@ -93,7 +93,8 @@ class NapdRecord(object):
     namely pointers to raw TOSCA or ETSI metadata.
     nr.metadata["tosca"] = [block0, block1 ...]
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self.error = None
         self.descriptor_schema = ("https://raw.githubusercontent.com"
                                   + "/sonata-nfv/tng-schema/master/"
                                   + "package-specification/napd-schema.yml")
@@ -105,6 +106,7 @@ class NapdRecord(object):
         self.release_date_time = None
         self.metadata = dict()
         self.package_content = list()
+        self.__dict__.update(kwargs)
 
     def __repr__(self):
         return "NapdRecord({})".format(pprint.pformat(self.__dict__))
@@ -114,6 +116,13 @@ class NapdRecord(object):
             if ce.get("source") == source:
                 return ce
         return None
+
+    def to_dict(self):
+        return self.__dict__.copy()
+
+    @property
+    def pkg_id(self):
+        pass  # TODO
 
     def update(self, data_dict):
         """
@@ -186,7 +195,7 @@ class Packager(object):
         self.status = PkgStatus.WAITING
         self.error_msg = None
         self.args = args
-        self.result = dict()
+        self.result = NapdRecord()
         LOG.info("Packager created: {}".format(self))
         LOG.debug("Packager args: {}".format(self.args))
 
@@ -225,9 +234,9 @@ class Packager(object):
         t_start = time.time()
         # call format specific implementation
         self.result = self._do_unpackage()
-        LOG.info("Packager done ({:.4f}s): {} result: {}".format(
-            time.time()-t_start, self, self.result))
-        if "error" in self.result and self.result.get("error") is None:
+        LOG.info("Packager done ({:.4f}s): {} error: {}".format(
+            time.time()-t_start, self, self.result.error))
+        if self.result.error is None:
             self.status = PkgStatus.SUCCESS
         else:
             self.status = PkgStatus.FAILED
@@ -249,21 +258,21 @@ class Packager(object):
     def _do_unpackage(self):
         LOG.error("_do_unpackage has to be overwritten")
         # time.sleep(2)
-        return {"error": "_do_unpackage has to be overwritten"}
+        return NapdRecord(error="_do_unpackage has to be overwritten")
 
     def _do_package(self):
         LOG.error("_do_unpackage has to be overwritten")
         # time.sleep(2)
-        return {"error": "_do_unpackage has to be overwritten"}
+        return NapdRecord(error="_do_package has to be overwritten")
 
 
 class TestPackager(Packager):
 
     def _do_unpackage(self):
-        return {"error": None}
+        return NapdRecord()
 
     def _do_package(self):
-        return {"error": None}
+        return NapdRecord()
 
 
 class CsarBasePackager(Packager):
@@ -550,37 +559,39 @@ class TangoPackager(EtsiPackager):
         # fuzzy find right wd path
         wd = fuzzy_find_wd(wd)
         # collect metadata
+        napdr = None
         try:
             napdr = self.collect_metadata(wd)
         except BaseException as e:
             LOG.error(str(e))
-            return {"error": str(e)}
+            return NapdRecord(error=str(e))
         # LOG.debug("Collected metadata: {}".format(napdr))
         # validate metadata
         try:
             self._assert_usable_tango_package(napdr)
         except MetadataValidationException as e:
             LOG.error(str(e))
-            return {"error": str(e)}
+            napdr.error = str(e)
+            return napdr
         # validate checksums
         try:
             self._validate_package_content_checksums(wd, napdr)
         except ChecksumException as e:
             LOG.error(str(e))
-            return {"error": str(e)}
+            napdr.error = str(e)
+            return napdr
         except MissingFileException as e:
             LOG.error(str(e))
-            return {"error": str(e)}
+            napdr.error = str(e)
+            return napdr
 
         # TODO clean up temporary files and folders
-        print(napdr)
-        assert(wd is not None)
-        assert(napdr is not None)
-        return {"error": None}
+
+        return napdr
 
     def _do_package(self):
         LOG.warning("TangoPackager _do_package not implemented")
-        return {"error": None}
+        return NapdRecord()
 
 # #########################
 # Helpers
