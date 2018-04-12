@@ -46,6 +46,41 @@ docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:50
 
 TODO (e.g. link to wiki page)
 
+## Examples
+
+### CLI Mode
+
+```sh
+# unpack valid package
+tng-package -u misc/5gtango-ns-package-example.tgo -o /tmp -v
+
+# unpack invalid package
+tng-package -u misc/5gtango-ns-package-example.tgo -o /tmp -v
+```
+
+### REST Mode
+
+```sh
+# terminal 1 (tng-package service)
+tng-package -s
+
+# terminal 2 (callback dummy)
+python misc/callback_mock.py
+
+# terminal 3 (client)
+# unpack valid package
+curl -X POST -v -H "Content-Type: multipart/form-data" \
+    -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
+    -F package="@misc/5gtango-ns-package-example.tgo" \
+    http://127.0.0.1:5099/api/v1/packages
+
+# unpack invalid package
+curl -X POST -v -H "Content-Type: multipart/form-data" \
+    -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
+    -F package="@misc/5gtango-ns-package-example-malformed.tgo" \
+    http://127.0.0.1:5099/api/v1/packages
+```
+
 ## Development
 
 To contribute to the development of this 5GTANGO component, you may use the very same development workflow as for any other 5GTANGO Github project. That is, you have to fork the repository and create pull requests.

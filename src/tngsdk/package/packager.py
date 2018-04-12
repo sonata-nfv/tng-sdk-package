@@ -79,7 +79,7 @@ class PkgStatus(object):
     WAITING = "waiting"
     RUNNING = "running"
     FAILED = "failed"
-    DONE = "done"
+    SUCCESS = "success"
 
 
 class NapdRecord(object):
@@ -186,7 +186,7 @@ class Packager(object):
         self.status = PkgStatus.WAITING
         self.error_msg = None
         self.args = args
-        self.result = None
+        self.result = dict()
         LOG.info("Packager created: {}".format(self))
         LOG.debug("Packager args: {}".format(self.args))
 
@@ -225,9 +225,12 @@ class Packager(object):
         t_start = time.time()
         # call format specific implementation
         self.result = self._do_unpackage()
-        LOG.info("Packager done ({:.4f}s): {}".format(
-            time.time()-t_start, self))
-        self.status = PkgStatus.DONE
+        LOG.info("Packager done ({:.4f}s): {} result: {}".format(
+            time.time()-t_start, self, self.result))
+        if "error" in self.result and self.result.get("error") is None:
+            self.status = PkgStatus.SUCCESS
+        else:
+            self.status = PkgStatus.FAILED
         # callback
         if callback_func:
             callback_func(self)
@@ -238,7 +241,7 @@ class Packager(object):
         self.result = self._do_package()
         LOG.info("Packager done ({:.4f}s): {}".format(
             time.time()-t_start, self))
-        self.status = PkgStatus.DONE
+        self.status = PkgStatus.SUCCESS
         # callback
         if callback_func:
             callback_func(self)

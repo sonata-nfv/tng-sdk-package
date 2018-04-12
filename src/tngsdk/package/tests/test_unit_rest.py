@@ -132,7 +132,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(r2.status_code, 200)
         rd2 = json.loads(r2.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd2)
-        self.assertEqual(rd2.get("status"), "done")
+        self.assertEqual(rd2.get("status"), "success")
         # do a call to a non existing packager status
         r2 = self.app.get(
             "/api/v1/packages/{}".format("foo-bar"))

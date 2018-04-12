@@ -123,9 +123,10 @@ def _do_callback_request(url, body):
     try:
         base_body = {
             "event_name": "onPackageChangeEvent",
-            "package_id": "foobar",  # TODO replace with None
-            "package_location": "foobar",  # TODO replace with None
+            "package_id": None,
+            "package_location": None,
             "package_metadata": None,
+            "package_process_status": None,
             "package_process_uuid": None
         }
         # apply parameters
@@ -141,15 +142,21 @@ def on_unpackaging_done(packager):
     """
     Callback function for packaging procedure.
     """
-    LOG.info("DONE: Unpackaging using {}".format(packager))
+    LOG.info("{}: Unpackaging using {} error: {}".format(
+        packager.status.upper(), packager, packager.result.get("error")))
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
     LOG.info("Callback: POST to '{}'".format(c_url))
+    # build callback payload
+    pl = {"package_id": "",
+          "package_location": "",
+          "package_metadata": packager.result,
+          "package_process_status": str(packager.status),
+          "package_process_uuid": str(packager.uuid)}
     # perform callback request
-    r_code = _do_callback_request(c_url,
-                                  {"package_process_uuid": str(packager.uuid)})
-    LOG.info("DONE: Status {}".format(r_code))
+    r_code = _do_callback_request(c_url, pl)
+    LOG.info("DONE: Callback response status {}".format(r_code))
     return r_code
 
 
@@ -191,7 +198,10 @@ class Packages(Resource):
         args.package = None
         args.unpackage = temppkg_path
         p = PM.new_packager(args)  # TODO pass args to packager
-        p.unpackage(callback_func=on_unpackaging_done)
+        try:
+            p.unpackage(callback_func=on_unpackaging_done)
+        except BaseException as e:
+            LOG.exception("Unpackaging error:")
         return {"package_process_uuid": p.uuid}
 
 
