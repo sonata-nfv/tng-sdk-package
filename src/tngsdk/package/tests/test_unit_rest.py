@@ -120,7 +120,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertIn("package_process_uuid", rd)
         # do a call to the status endpoint
         r2 = self.app.get(
-            "/api/v1/packages/{}".format(
+            "/api/v1/packages/status/{}".format(
                 rd.get("package_process_uuid")))
         self.assertEqual(r2.status_code, 200)
         rd2 = json.loads(r2.get_data(as_text=True))
@@ -128,7 +128,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(rd2.get("status"), "running")
         time.sleep(1)  # wait a bit so that packager can finalize
         r2 = self.app.get(
-            "/api/v1/packages/{}".format(
+            "/api/v1/packages/status/{}".format(
                 rd.get("package_process_uuid")))
         self.assertEqual(r2.status_code, 200)
         rd2 = json.loads(r2.get_data(as_text=True))
@@ -136,7 +136,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(rd2.get("status"), "success")
         # do a call to a non existing packager status
         r2 = self.app.get(
-            "/api/v1/packages/{}".format("foo-bar"))
+            "/api/v1/packages/status/{}".format("foo-bar"))
         self.assertEqual(r2.status_code, 404)
 
     def test_on_packaging_done(self):

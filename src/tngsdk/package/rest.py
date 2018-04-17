@@ -212,7 +212,7 @@ class Packages(Resource):
         return {"package_process_uuid": p.uuid}
 
 
-@api_v1.route("/packages/<string:package_process_uuid>")
+@api_v1.route("/packages/status/<string:package_process_uuid>")
 class PackagesItem(Resource):
 
     @api_v1.marshal_with(packages_get_return_model)
