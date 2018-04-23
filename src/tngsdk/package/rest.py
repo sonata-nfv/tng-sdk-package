@@ -199,9 +199,12 @@ class Packages(Resource):
         args.package = None
         args.unpackage = temppkg_path
         # pass CLI args to REST args
+        args.offline = False
+        args.no_checksums = False
+        args.no_autoversion = False
         if app.cliargs is not None:
             args.offline = app.cliargs.offline
-            args.no_cecksums = app.cliargs.no_checksums
+            args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.no_autoversion
         # instantiate packager
         p = PM.new_packager(args)

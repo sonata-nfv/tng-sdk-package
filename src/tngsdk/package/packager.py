@@ -197,7 +197,7 @@ class Packager(object):
         self.args = args
         self.result = NapdRecord()
         LOG.info("Packager created: {}".format(self))
-        LOG.debug("Packager args: {}".format(self.args))
+        LOG.info("Packager args: {}".format(self.args))
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)
@@ -459,7 +459,17 @@ class EtsiPackager(CsarBasePackager):
                     "Checksum: File not found: {}".format(
                         os.path.join(wd, ce.get("source"))))
             # validate checksum
-            validate_file_checksum(path, ce.get("algorithm"), ce.get("hash"))
+            try:
+                validate_file_checksum(
+                    path, ce.get("algorithm"), ce.get("hash"))
+            except ChecksumException as e:
+                # decide if checksum missmatch is error
+                print((self.args.no_checksums))
+                if self.args.no_checksums:
+                    # LOG.warning(e)
+                    LOG.warning("Ignoring error (--ignore-checksums)")
+                else:
+                    raise e
 
 
 class TangoPackager(EtsiPackager):
