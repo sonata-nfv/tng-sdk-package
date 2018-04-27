@@ -41,6 +41,20 @@ pipeline/build/build.sh
 docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
 ```
 
+## Configuration
+
+### CLI mode
+
+TODO
+
+### Service mode
+
+The `tng-sdk-package` service can be configured through environment variables, e.g., placed in its Dockerfile.
+
+```bash
+# URL to the catalogue enpoint to which package contents are uploaded
+ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+```
 
 ## Documentation
 

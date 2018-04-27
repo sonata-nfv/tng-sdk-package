@@ -34,12 +34,14 @@ import os
 import json
 import tempfile
 from flask import Flask, Blueprint
-from flask_restplus import Resource, Api, Namespace, fields
+from flask_restplus import Resource, Api, Namespace
+from flask_restplus import fields, inputs
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
+from tngsdk.package.storage import TangoCatalogBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -99,6 +101,12 @@ packages_parser.add_argument("format",
                              required=False,
                              default="eu.5gtango",
                              help="Package format (optional)")
+packages_parser.add_argument("skip_store",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=False,
+                             help="Skip catalog upload of contents (optional)")
 
 packages_post_return_model = api_v1.model("PackagesPostReturn", {
     "package_process_uuid": fields.String(
@@ -150,8 +158,9 @@ def on_unpackaging_done(packager):
     c_url = packager.args.get("callback_url")
     LOG.info("Callback: POST to '{}'".format(c_url))
     # build callback payload
-    pl = {"package_id": "",
-          "package_location": "",
+    pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
+          "package_location": packager.result.metadata.get(
+              "_storage_location"),
           "package_metadata": packager.result.to_dict(),
           "package_process_status": str(packager.status),
           "package_process_uuid": str(packager.uuid)}
@@ -206,8 +215,13 @@ class Packages(Resource):
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.no_autoversion
+        # instantiate storage backend
+        # TODO make configurable, for now TangoCatalogBackend hard coded
+        sb = None
+        if not args.skip_store:
+            sb = TangoCatalogBackend(args)
         # instantiate packager
-        p = PM.new_packager(args)
+        p = PM.new_packager(args, storage_backend=sb)
         try:
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:

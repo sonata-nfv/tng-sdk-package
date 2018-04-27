@@ -259,7 +259,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(len(tosca_meta), 2)
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(len(etsi_mf), 6)
-        napd = self.p._read_napd(wd, tosca_meta)
+        napd, npath = self.p._read_napd(wd, tosca_meta)
         self.assertIn("descriptor_schema", napd)
 
     def test_read_missing_metadata(self):
@@ -270,7 +270,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(tosca_meta, [{}])
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(etsi_mf, [{}])
-        napd = self.p._read_napd(wd, tosca_meta)
+        napd, npath = self.p._read_napd(wd, tosca_meta)
         self.assertNotIn("descriptor_schema", napd)
 
     def test_read_malformed_metadata(self):
@@ -312,7 +312,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster (Paderborn University)")
         self.assertEqual(len(napdr.release_date_time), 20)
-        self.assertEqual(len(napdr.metadata), 2)
+        self.assertEqual(len(napdr.metadata), 3)
 
     def test_collect_metadata_etsi(self):
         """
@@ -336,7 +336,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster (Paderborn University)")
         self.assertEqual(len(napdr.release_date_time), 20)
-        self.assertEqual(len(napdr.metadata), 2)
+        self.assertEqual(len(napdr.metadata), 3)
         self.assertEqual(len(napdr.package_content), 5)
         print(napdr.package_content)
         self.assertContentEntry(
@@ -372,7 +372,7 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.assertEqual(napdr.maintainer,
                          "Manuel Peuster, Paderborn University")
         self.assertEqual(len(napdr.release_date_time), 25)
-        self.assertEqual(len(napdr.metadata), 2)
+        self.assertEqual(len(napdr.metadata), 3)
         self.assertEqual(len(napdr.package_content), 7)
         self.assertContentEntry(
             self.findConentEntry(napdr, "Definitions/mynsd.yaml"),

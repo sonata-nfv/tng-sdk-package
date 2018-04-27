@@ -109,7 +109,7 @@ class NapdRecord(object):
         self.__dict__.update(kwargs)
 
     def __repr__(self):
-        return "NapdRecord({})".format(pprint.pformat(self.__dict__))
+        return "NapdRecord({})".format(pprint.pformat(self.to_dict()))
 
     def find_package_content_entry(self, source):
         for ce in self.package_content:
@@ -151,7 +151,9 @@ class PackagerManager(object):
     def __init__(self):
         self._packager_list = list()
 
-    def new_packager(self, args, pkg_format="eu.5gtango"):
+    def new_packager(self, args,
+                     storage_backend=None,
+                     pkg_format="eu.5gtango"):
         # select the right Packager for the given format
         packager_cls = None
         if pkg_format == "eu.5gtango":
@@ -164,7 +166,7 @@ class PackagerManager(object):
         if packager_cls is None:
             raise UnsupportedPackageFormatException(
                 "Pkg. format: {} not supported.".format(pkg_format))
-        p = packager_cls(args)
+        p = packager_cls(args, storage_backend=storage_backend)
         # TODO cleanup after packaging has completed (memory leak!!!)
         self._packager_list.append(p)
         return p
@@ -189,10 +191,11 @@ class Packager(object):
     by format-specific packager classes.
     """
 
-    def __init__(self, args):
+    def __init__(self, args, storage_backend=None):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
         self.status = PkgStatus.WAITING
+        self.storage_backend = storage_backend
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
@@ -477,18 +480,19 @@ class TangoPackager(EtsiPackager):
     def collect_metadata(self, wd):
         nr = super().collect_metadata(wd)
         LOG.debug("Collecting 5GTANGO (NAPD) meta data ...")
-        napd = self._read_napd(
+        napd, napd_path = self._read_napd(
             wd, nr.metadata.get("tosca"))
         # update NR with NAPD data
-        return self._update_nr_with_napd(napd, nr)
+        return self._update_nr_with_napd(napd, napd_path, nr)
 
-    def _update_nr_with_napd(self, napd, nr=None):
+    def _update_nr_with_napd(self, napd, napd_path, nr=None):
         """
         Updates NR with data from NAPD file input.
         """
         if nr is None:
             nr = NapdRecord()
         nr.update(napd)
+        nr.metadata["_napd_path"] = napd_path
         return nr
 
     def _read_napd(self, wd, tosca_meta):
@@ -497,7 +501,7 @@ class TangoPackager(EtsiPackager):
         against its online schema.
         - try 1: Use block_1 from TOSCA.meta to find NAPD
         - try 2: Look for **/NAPD.yaml
-        Returns valid NAPD schema formatted dict.
+        Returns valid NAPD schema formatted dict. and NAPD path
         """
         try:
             path = None
@@ -514,15 +518,15 @@ class TangoPackager(EtsiPackager):
                         os.path.join(wd, "**/NAPD.yaml"), recursive=False)
             if path is None:
                 LOG.warning("Couldn't find NAPD file: {}".format(wd))
-                return dict()  # TODO return an empty NAPD skeleton here
+                return dict(), None  # TODO return an empty NAPD skeleton here
             with open(path, "r") as f:
                 data = yaml.load(f)
                 if self.args.offline:
                     LOG.warning("Skipping NAPD validation (--offline)")
-                    return data  # skip validation step
+                    return data, path  # skip validation step
                 # validate
                 if validate_yaml_online(data):
-                    return data
+                    return data, path
                 raise NapdNotValidException(
                     "Validation of {} failed.".format(path))
         except NapdNotValidException as e:
@@ -531,7 +535,7 @@ class TangoPackager(EtsiPackager):
         except BaseException as e:
             LOG.error("Cannot read NAPD.yaml file: {}".format(e))
             # raise e
-        return dict()  # TODO return an empty NAPD skeleton here
+        return dict(), None  # TODO return an empty NAPD skeleton here
 
     def _assert_usable_tango_package(self, napdr):
         """
@@ -594,6 +598,15 @@ class TangoPackager(EtsiPackager):
             LOG.error(str(e))
             napdr.error = str(e)
             return napdr
+        # call storage backend
+        if self.storage_backend is not None:
+            try:
+                # store/upload contents of package and get updated napdr
+                napdr = self.storage_backend.store(
+                    napdr, wd, self.args.unpackage)
+            except BaseException as e:
+                LOG.exception("Storage error")
+                raise e
 
         # TODO clean up temporary files and folders
 

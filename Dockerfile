@@ -32,13 +32,23 @@
 FROM python:3.6-slim
 MAINTAINER 5GTANGO
 
+#
+# Configurations
+#
+# URL to the catalogue enpoint to which package contents are uploaded
+ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+
+
+#
+# Installation
+#
 RUN pip install flake8
-
 ADD . /tng-sdk-package
-
 WORKDIR /tng-sdk-package
 RUN python setup.py install
 
+#
+# Runtime
+#
 EXPOSE 5099
-
 CMD ["tng-package","-s"]
