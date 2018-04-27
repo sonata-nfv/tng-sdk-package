@@ -34,7 +34,8 @@ import os
 import json
 import tempfile
 from flask import Flask, Blueprint
-from flask_restplus import Resource, Api, Namespace, fields
+from flask_restplus import Resource, Api, Namespace
+from flask_restplus import fields, inputs
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
 import requests
@@ -100,6 +101,12 @@ packages_parser.add_argument("format",
                              required=False,
                              default="eu.5gtango",
                              help="Package format (optional)")
+packages_parser.add_argument("skip_store",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=False,
+                             help="Skip catalog upload of contents (optional)")
 
 packages_post_return_model = api_v1.model("PackagesPostReturn", {
     "package_process_uuid": fields.String(
@@ -209,7 +216,9 @@ class Packages(Resource):
             args.no_autoversion = app.cliargs.no_autoversion
         # instantiate storage backend
         # TODO make configurable, for now TangoCatalogBackend hard coded
-        sb = TangoCatalogBackend(args)
+        sb = None
+        if not args.skip_store:
+            sb = TangoCatalogBackend(args)
         # instantiate packager
         p = PM.new_packager(args, storage_backend=sb)
         try:

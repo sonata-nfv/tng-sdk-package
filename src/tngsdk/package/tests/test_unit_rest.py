@@ -90,8 +90,8 @@ class TngSdkPackageRestTest(unittest.TestCase):
                           content_type="multipart/form-data",
                           data={"package": (
                               open("misc/5gtango-ns-package-example.tgo",
-                                   "rb"),
-                              "5gtango-ns-package-example.tgo")})
+                                   "rb"), "5gtango-ns-package-example.tgo"),
+                                "skip_store": True})
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
@@ -100,9 +100,9 @@ class TngSdkPackageRestTest(unittest.TestCase):
                           content_type="multipart/form-data",
                           data={"package": (
                               open("misc/5gtango-ns-package-example.tgo",
-                                   "rb"),
-                              "5gtango-ns-package-example.tgo"),
-                                "callback_url": "https://test.local:8000/cb"})
+                                   "rb"), "5gtango-ns-package-example.tgo"),
+                                "callback_url": "https://test.local:8000/cb",
+                                "skip_store": True})  # skip store step in test
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
@@ -113,8 +113,8 @@ class TngSdkPackageRestTest(unittest.TestCase):
                           content_type="multipart/form-data",
                           data={"package": (
                               open("misc/5gtango-ns-package-example.tgo",
-                                   "rb"),
-                              "5gtango-ns-package-example.tgo")})
+                                   "rb"), "5gtango-ns-package-example.tgo"),
+                                "skip_store": True})
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)

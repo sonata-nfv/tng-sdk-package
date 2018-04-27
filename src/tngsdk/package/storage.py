@@ -45,6 +45,13 @@ class TangoCatalogBackend(BaseStorageBackend):
 
     def __init__(self, args):
         self.args = args
+        # get environment config
+        self.cat_url = os.environ.get(
+            "CATALOGUE_URL",  # ENV CATALOGUE_URL
+            "http://127.0.0.1:4011/catalogues/api/v2"  # fallback
+        )
+        LOG.info("Initialized TangoCatalogBackend({})"
+                 .format(self.cat_url))
 
     def store(self, napdr, wd, pkg_file):
         """
@@ -56,6 +63,8 @@ class TangoCatalogBackend(BaseStorageBackend):
         :return napdr: updated/annotated napdr
         """
         LOG.error("STORAGE STORAGE STORAGE")
+        LOG.error("cat_url={}".format(self.cat_url))
+        assert(self.cat_url == "http://127.0.0.1:4011/catalogues/api/v21")
         LOG.error("{}  AND   {}".format(wd, pkg_file))
         # updated/annotated napdr
         return napdr
