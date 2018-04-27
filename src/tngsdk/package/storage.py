@@ -122,6 +122,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         Build dict with additional data for catalog.
         see: https://github.com/sonata-nfv/tng-sdk-package/issues/14
         """
+        # TODO implement this
         pass
 
     def store(self, napdr, wd, pkg_file):
@@ -161,7 +162,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         pkg_uuid = pkg_resp.json().get("uuid")
         pkg_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
         LOG.info("Received PKG UUID from catalog: {}".format(pkg_uuid))
-        # 6. upload mata data mapping (catalog support)
+        # 6. TODO upload mata data mapping (catalog support)
         cat_metadata = self._build_catalog_metadata(
             napdr, vnfds, nsds, pkg_uuid)
         LOG.debug("Prepared add. catalog meta data: {}".format(cat_metadata))
