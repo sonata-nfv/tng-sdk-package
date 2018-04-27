@@ -136,7 +136,17 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
 
         # 1. upload package descriptor
-        self._post_package_descriptor(napdr)
+        pkg_resp = self._post_package_descriptor(napdr)
+        if pkg_resp.status_code != 201 and pkg_resp.status_code != 200:
+            raise StorageBackendUploadException(
+                "Could not upload package. Response: {}"
+                .format(pkg_resp.status_code))
+        pkg_uuid = pkg_resp.json().get("uuid")
+        if pkg_uuid is None:
+            raise StorageBackendUploadException(
+                "Duplicated package.")
+        pkg_url = "{}/packages/{}".format(self.cat_url, pkg_uuid)
+        LOG.info("Received PKG UUID from catalog: {}".format(pkg_uuid))
         # 2. collect and upload VNFDs
         vnfds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.vnfd")
@@ -159,12 +169,11 @@ class TangoCatalogBackend(BaseStorageBackend):
             raise StorageBackendUploadException(
                 "Could not upload package. Response: {}"
                 .format(pkg_resp.status_code))
-        pkg_uuid = pkg_resp.json().get("uuid")
-        pkg_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
-        LOG.info("Received PKG UUID from catalog: {}".format(pkg_uuid))
+        pkg_file_uuid = pkg_resp.json().get("uuid")
+        pkg_file_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
         # 6. TODO upload mata data mapping (catalog support)
         cat_metadata = self._build_catalog_metadata(
-            napdr, vnfds, nsds, pkg_uuid)
+            napdr, vnfds, nsds, pkg_file_uuid)
         LOG.debug("Prepared add. catalog meta data: {}".format(cat_metadata))
         LOG.error("Additional catalog meta data not yet pushed to catalog!")
         # updated/annotated napdr
