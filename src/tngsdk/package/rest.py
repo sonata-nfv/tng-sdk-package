@@ -158,8 +158,9 @@ def on_unpackaging_done(packager):
     c_url = packager.args.get("callback_url")
     LOG.info("Callback: POST to '{}'".format(c_url))
     # build callback payload
-    pl = {"package_id": "",
-          "package_location": "",
+    pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
+          "package_location": packager.result.metadata.get(
+              "_storage_location"),
           "package_metadata": packager.result.to_dict(),
           "package_process_status": str(packager.status),
           "package_process_uuid": str(packager.uuid)}
