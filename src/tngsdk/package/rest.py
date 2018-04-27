@@ -40,6 +40,7 @@ from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
+from tngsdk.package.storage import TangoCatalogBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -206,8 +207,11 @@ class Packages(Resource):
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.no_autoversion
+        # instantiate storage backend
+        # TODO make configurable, for now TangoCatalogBackend hard coded
+        sb = TangoCatalogBackend(args)
         # instantiate packager
-        p = PM.new_packager(args)
+        p = PM.new_packager(args, storage_backend=sb)
         try:
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:

@@ -151,7 +151,9 @@ class PackagerManager(object):
     def __init__(self):
         self._packager_list = list()
 
-    def new_packager(self, args, pkg_format="eu.5gtango"):
+    def new_packager(self, args,
+                     storage_backend=None,
+                     pkg_format="eu.5gtango"):
         # select the right Packager for the given format
         packager_cls = None
         if pkg_format == "eu.5gtango":
@@ -164,7 +166,7 @@ class PackagerManager(object):
         if packager_cls is None:
             raise UnsupportedPackageFormatException(
                 "Pkg. format: {} not supported.".format(pkg_format))
-        p = packager_cls(args)
+        p = packager_cls(args, storage_backend=storage_backend)
         # TODO cleanup after packaging has completed (memory leak!!!)
         self._packager_list.append(p)
         return p
@@ -189,10 +191,11 @@ class Packager(object):
     by format-specific packager classes.
     """
 
-    def __init__(self, args):
+    def __init__(self, args, storage_backend=None):
         # unique identifier for this package request
         self.uuid = uuid.uuid4()
         self.status = PkgStatus.WAITING
+        self.storage_backend = storage_backend
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
@@ -594,6 +597,15 @@ class TangoPackager(EtsiPackager):
             LOG.error(str(e))
             napdr.error = str(e)
             return napdr
+        # call storage backend
+        if self.storage_backend is not None:
+            try:
+                # store/upload contents of package and get updated napdr
+                napdr = self.storage_backend.store(
+                    napdr, wd, self.args.unpackage)
+            except BaseException as e:
+                LOG.exception("Storage error")
+                raise e
 
         # TODO clean up temporary files and folders
 
