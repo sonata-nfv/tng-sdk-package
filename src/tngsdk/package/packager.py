@@ -605,11 +605,11 @@ class TangoPackager(EtsiPackager):
                 napdr = self.storage_backend.store(
                     napdr, wd, self.args.unpackage)
             except BaseException as e:
-                LOG.exception("Storage error")
-                raise e
+                LOG.error(str(e))
+                napdr.error = str(e)
+                return napdr
 
         # TODO clean up temporary files and folders
-
         return napdr
 
     def _do_package(self):
