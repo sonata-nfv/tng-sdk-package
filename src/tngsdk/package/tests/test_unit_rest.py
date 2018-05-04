@@ -148,3 +148,12 @@ class TngSdkPackageRestTest(unittest.TestCase):
         p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
         s = on_unpackaging_done(p)
         self.assertEqual(s, 200)
+
+    def test_ping_v1_endpoint(self):
+        # do a call to the ping endpoint
+        r1 = self.app.get("/api/v1/ping")
+        self.assertEqual(r1.status_code, 200)
+        rd1 = json.loads(r1.get_data(as_text=True))
+        self.assertIn("ping", rd1)
+        self.assertIn("uptime", rd1)
+        self.assertEqual(rd1.get("ping"), "pong")
