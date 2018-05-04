@@ -74,7 +74,18 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
         r = list()
         for pc in napdr.package_content:
-            if pc.get("content-type") == mime_type:
+            if mime_type in pc.get("content-type"):
+                r.append(os.path.join(wd, pc.get("source")))
+        return r
+
+    def _get_package_content_not_of_type(self, napdr, wd, mime_type):
+        """
+        Returns a list of paths to files referenced in napdr that
+        not match the given mime type.
+        """
+        r = list()
+        for pc in napdr.package_content:
+            if mime_type not in pc.get("content-type"):
                 r.append(os.path.join(wd, pc.get("source")))
         return r
 
@@ -87,11 +98,11 @@ class TangoCatalogBackend(BaseStorageBackend):
                                  data=data,
                                  headers={"Content-Type":
                                           "application/x-yaml"})
-        return None
 
     def _post_pkg_file_to_catalog(self, endpoint, path):
         url = "{}{}".format(self.cat_url, endpoint)
         cd_str = "attachment; filename={}.tgo".format(os.path.basename(path))
+        cd_str = cd_str.replace(".pkg", "")  # fix to not loose file ext.
         LOG.info("tng-cat-be: POST PKG to {} content {} using {}"
                  .format(url, path, cd_str))
         with open(path, "rb") as f:
@@ -100,7 +111,18 @@ class TangoCatalogBackend(BaseStorageBackend):
                                  data=data,
                                  headers={"Content-Type": "application/zip",
                                           "Content-Disposition": cd_str})
-        return None
+
+    def _post_generic_file_to_catalog(self, endpoint, path):
+        url = "{}{}".format(self.cat_url, endpoint)
+        cd_str = "attachment; filename={}".format(os.path.basename(path))
+        LOG.info("tng-cat-be: POST generic file to {} content {} using {}"
+                 .format(url, path, cd_str))
+        with open(path, "rb") as f:
+            data = f.read()
+            return requests.post(
+                url, data=data,
+                headers={"Content-Type": "application/octet-stream",
+                         "Content-Disposition": cd_str})
 
     def _post_package_descriptor(self, napdr):
         """
@@ -186,7 +208,20 @@ class TangoCatalogBackend(BaseStorageBackend):
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload test descriptor: ({}) {}"
                     .format(tstd_resp.status_code, tstd_resp.text))
-        # 5. TODO collect and upload all arbitrary other files
+        # 5. collect and upload all arbitrary other files
+        generic_files = self._get_package_content_not_of_type(
+            napdr, wd, "application/vnd.5gtango")
+        generic_files_uuids = dict()
+        for gf in generic_files:
+            gf_resp = self._post_generic_file_to_catalog("/files", gf)
+            if gf_resp.status_code != 201:
+                raise StorageBackendUploadException(
+                    "tng-cat-be: could not upload generic file ({}): ({}) {}"
+                    .format(gf, gf_resp.status_code, gf_resp.text))
+            gf_clean = os.path.basename(gf)
+            generic_files_uuids[gf_clean] = gf_resp.json().get("uuid")
+            LOG.debug("Generic file '{}' stored under UUID: {}".format(
+                gf_clean, generic_files_uuids[gf_clean]))
         # 6. upload Package file *.tgo and get catalog UUID
         pkg_resp = self._post_pkg_file_to_catalog(
             "/tgo-packages", pkg_file)
@@ -205,5 +240,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         # updated/annotated napdr
         napdr.metadata["_storage_uuid"] = pkg_uuid
         napdr.metadata["_storage_location"] = pkg_url
+        napdr.metadata["_storage_pkg_file"] = pkg_file_uuid
+        napdr.metadata["_storage_generic_files"] = generic_files_uuids
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
