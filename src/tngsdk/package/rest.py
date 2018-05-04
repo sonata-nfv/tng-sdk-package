@@ -33,6 +33,7 @@ import logging
 import os
 import json
 import tempfile
+import subprocess
 from flask import Flask, Blueprint
 from flask_restplus import Resource, Api, Namespace
 from flask_restplus import fields, inputs
@@ -125,6 +126,15 @@ packages_get_return_model = api_v1.model("PackagesGetReturn", {
     "error_msg": fields.String(
         description="More detailed error message.",
         required=False),
+})
+
+ping_get_return_model = api_v1.model("PingGetReturn", {
+    "ping": fields.String(
+        description="pong",
+        required=True),
+    "uptime": fields.String(
+        description="system uptime",
+        required=True),
 })
 
 
@@ -255,3 +265,13 @@ class Project(Resource):
         p = PM.new_packager(None)
         p.package(callback_func=on_packaging_done)
         return "not implemented", 501
+
+
+@api_v1.route("/ping")
+class Ping(Resource):
+
+    @api_v1.marshal_with(ping_get_return_model)
+    @api_v1.response(200, "OK")
+    def get(self):
+        return {"ping": "pong",
+                "uptime": str(subprocess.check_output("uptime")).strip()}
