@@ -34,6 +34,7 @@ import logging
 import os
 import requests
 import yaml
+import json
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -74,7 +75,18 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
         r = list()
         for pc in napdr.package_content:
-            if pc.get("content-type") == mime_type:
+            if mime_type in pc.get("content-type"):
+                r.append(os.path.join(wd, pc.get("source")))
+        return r
+
+    def _get_package_content_not_of_type(self, napdr, wd, mime_type):
+        """
+        Returns a list of paths to files referenced in napdr that
+        not match the given mime type.
+        """
+        r = list()
+        for pc in napdr.package_content:
+            if mime_type not in pc.get("content-type"):
                 r.append(os.path.join(wd, pc.get("source")))
         return r
 
@@ -87,11 +99,21 @@ class TangoCatalogBackend(BaseStorageBackend):
                                  data=data,
                                  headers={"Content-Type":
                                           "application/x-yaml"})
-        return None
+
+    def _post_json_file_to_catalog(self, endpoint, path):
+        url = "{}{}".format(self.cat_url, endpoint)
+        LOG.info("tng-cat-be: POST JSON to {} content {}".format(url, path))
+        with open(path, "rb") as f:
+            data = f.read()
+            return requests.post(url,
+                                 data=data,
+                                 headers={"Content-Type":
+                                          "application/json"})
 
     def _post_pkg_file_to_catalog(self, endpoint, path):
         url = "{}{}".format(self.cat_url, endpoint)
         cd_str = "attachment; filename={}.tgo".format(os.path.basename(path))
+        cd_str = cd_str.replace(".pkg", "")  # fix to not loose file ext.
         LOG.info("tng-cat-be: POST PKG to {} content {} using {}"
                  .format(url, path, cd_str))
         with open(path, "rb") as f:
@@ -100,7 +122,18 @@ class TangoCatalogBackend(BaseStorageBackend):
                                  data=data,
                                  headers={"Content-Type": "application/zip",
                                           "Content-Disposition": cd_str})
-        return None
+
+    def _post_generic_file_to_catalog(self, endpoint, path):
+        url = "{}{}".format(self.cat_url, endpoint)
+        cd_str = "attachment; filename={}".format(os.path.basename(path))
+        LOG.info("tng-cat-be: POST generic file to {} content {} using {}"
+                 .format(url, path, cd_str))
+        with open(path, "rb") as f:
+            data = f.read()
+            return requests.post(
+                url, data=data,
+                headers={"Content-Type": "application/octet-stream",
+                         "Content-Disposition": cd_str})
 
     def _post_package_descriptor(self, napdr):
         """
@@ -122,13 +155,49 @@ class TangoCatalogBackend(BaseStorageBackend):
     def _post_test_descriptors(self, tstd):
         return self._post_yaml_file_to_catalog("/tests", tstd)
 
-    def _build_catalog_metadata(self, napdr, vnfds, nsds, pkg_uuid):
+    def _get_id_triple_from_descriptor_file(self, path):
         """
-        Build dict with additional data for catalog.
+        gets vendor, name, version from YAML descriptor
+        returns dict
+        """
+        res = dict()
+        try:
+            with open(path, 'r') as f:
+                data = yaml.load(f)
+                res["vendor"] = data["vendor"]
+                res["name"] = data["name"]
+                res["version"] = data["version"]
+        except BaseException as e:
+            LOG.error(str(e))
+            raise StorageBackendFileException(
+                "Couldn't get ID triple from descriptor {}"
+                .format(path))
+        return res
+
+    def _build_catalog_metadata(
+            self, napdr,
+            nsds, vnfds, tstds,
+            generic_files_uuids, pkg_uuid):
+        """
+        Build dict with additional data for catalog mapping.
         see: https://github.com/sonata-nfv/tng-sdk-package/issues/14
         """
-        # TODO implement this
-        pass
+        res = dict()
+        res["pd"] = {"vendor": napdr.vendor,
+                     "name": napdr.name,
+                     "version": napdr.version}
+        res["nsds"] = [
+            self._get_id_triple_from_descriptor_file(f) for f in nsds]
+        res["vnfds"] = [
+            self._get_id_triple_from_descriptor_file(f) for f in vnfds]
+        res["testds"] = [
+            self._get_id_triple_from_descriptor_file(f) for f in tstds]
+        res["deps"] = []
+        res["files"] = [
+            {"file_uuid": v, "file_name": k} for
+            k, v in generic_files_uuids.items()]
+        res["tgo_package_uuid"] = pkg_uuid
+        return res
 
     def store(self, napdr, wd, pkg_file):
         """
@@ -181,12 +250,25 @@ class TangoCatalogBackend(BaseStorageBackend):
         tstds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.tstd")
         for tstd in tstds:
-            tstd_resp = self._post_vnf_descriptors(tstd)
+            tstd_resp = self._post_test_descriptors(tstd)
             if tstd_resp.status_code != 201:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload test descriptor: ({}) {}"
                     .format(tstd_resp.status_code, tstd_resp.text))
-        # 5. TODO collect and upload all arbitrary other files
+        # 5. collect and upload all arbitrary other files
+        generic_files = self._get_package_content_not_of_type(
+            napdr, wd, "application/vnd.5gtango")
+        generic_files_uuids = dict()
+        for gf in generic_files:
+            gf_resp = self._post_generic_file_to_catalog("/files", gf)
+            if gf_resp.status_code != 201:
+                raise StorageBackendUploadException(
+                    "tng-cat-be: could not upload generic file ({}): ({}) {}"
+                    .format(gf, gf_resp.status_code, gf_resp.text))
+            gf_clean = os.path.basename(gf)
+            generic_files_uuids[gf_clean] = gf_resp.json().get("uuid")
+            LOG.debug("Generic file '{}' stored under UUID: {}".format(
+                gf_clean, generic_files_uuids[gf_clean]))
         # 6. upload Package file *.tgo and get catalog UUID
         pkg_resp = self._post_pkg_file_to_catalog(
             "/tgo-packages", pkg_file)
@@ -196,14 +278,26 @@ class TangoCatalogBackend(BaseStorageBackend):
                 .format(pkg_resp.status_code))
         pkg_file_uuid = pkg_resp.json().get("uuid")
         # pkg_file_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
-        # 7. TODO upload mata data mapping (catalog support)
+        # 7. upload mata data mapping (catalog support)
+        # 7.1 generate
         cat_metadata = self._build_catalog_metadata(
-            napdr, vnfds, nsds, pkg_file_uuid)
-        LOG.debug("tng-cat-be: prepared add. catalog meta data: {}"
-                  .format(cat_metadata))
-        LOG.error("tng-cat-be: additional metadata upload not yet implemented")
+            napdr, nsds, vnfds, tstds, generic_files_uuids, pkg_file_uuid)
+        # 7.2 write to temp file (not nice, but fits to exp. bin. of tng-cat)
+        mapping_path = "/tmp/{}_mapping.json".format(pkg_uuid)
+        with open(mapping_path, "w") as f:
+            json.dump(cat_metadata, f)
+        LOG.debug("Wrote catalog mapping to {}".format(mapping_path))
+        # 7.3 upload temp file
+        map_resp = self._post_json_file_to_catalog(
+            "/tgo-packages/mappings", mapping_path)
+        if map_resp.status_code != 201 and map_resp.status_code != 200:
+            raise StorageBackendUploadException(
+                "tng-cat-be: could not upload cat. mapping. Response: ({}) {}"
+                .format(map_resp.status_code, map_resp.text))
         # updated/annotated napdr
         napdr.metadata["_storage_uuid"] = pkg_uuid
         napdr.metadata["_storage_location"] = pkg_url
+        napdr.metadata["_storage_pkg_file"] = pkg_file_uuid
+        napdr.metadata["_storage_generic_files"] = generic_files_uuids
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
