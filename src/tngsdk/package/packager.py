@@ -178,6 +178,10 @@ class PackagerManager(object):
                 return p
         return None
 
+    @property
+    def packager_list(self):
+        return self._packager_list
+
 
 # have one global instance of the manager
 PM = PackagerManager()
@@ -578,6 +582,7 @@ class TangoPackager(EtsiPackager):
             napdr = self.collect_metadata(wd)
         except BaseException as e:
             LOG.error(str(e))
+            self.error_msg = str(e)
             return NapdRecord(error=str(e))
         # LOG.debug("Collected metadata: {}".format(napdr))
         # validate metadata
@@ -585,6 +590,7 @@ class TangoPackager(EtsiPackager):
             self._assert_usable_tango_package(napdr)
         except MetadataValidationException as e:
             LOG.error(str(e))
+            self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
         # validate checksums
@@ -592,10 +598,12 @@ class TangoPackager(EtsiPackager):
             self._validate_package_content_checksums(wd, napdr)
         except ChecksumException as e:
             LOG.error(str(e))
+            self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
         except MissingFileException as e:
             LOG.error(str(e))
+            self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
         # call storage backend
@@ -606,6 +614,7 @@ class TangoPackager(EtsiPackager):
                     napdr, wd, self.args.unpackage)
             except BaseException as e:
                 LOG.error(str(e))
+                self.error_msg = str(e)
                 napdr.error = str(e)
                 return napdr
 

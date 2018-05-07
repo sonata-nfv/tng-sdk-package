@@ -115,18 +115,25 @@ packages_post_return_model = api_v1.model("PackagesPostReturn", {
         required=True)
 })
 
-packages_get_return_model = api_v1.model("PackagesGetReturn", {
-    "package_process_uuid": fields.String(
+packages_status_item_get_return_model = api_v1.model(
+    "PackagesStatusItemGetReturn",
+    {"package_process_uuid": fields.String(
         description="UUID of started unpackaging process.",
         required=True),
-    "status": fields.String(
+     "status": fields.String(
         description="Status of the unpacking process:"
         + " waiting|runnig|failed|done",
         required=True),
-    "error_msg": fields.String(
+     "error_msg": fields.String(
         description="More detailed error message.",
-        required=False),
-})
+         required=False), }
+)
+
+packages_status_list_get_return_model = api_v1.model(
+    "PackagesStatusListGetReturn",
+    {"package_processes": fields.List(
+        fields.Nested(packages_status_item_get_return_model)), }
+)
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
     "ping": fields.String(
@@ -240,9 +247,9 @@ class Packages(Resource):
 
 
 @api_v1.route("/packages/status/<string:package_process_uuid>")
-class PackagesItem(Resource):
+class PackagesStatusItem(Resource):
 
-    @api_v1.marshal_with(packages_get_return_model)
+    @api_v1.marshal_with(packages_status_item_get_return_model)
     @api_v1.response(200, "OK")
     @api_v1.response(404, "Package process not found.")
     def get(self, package_process_uuid):
@@ -250,9 +257,23 @@ class PackagesItem(Resource):
         if p is None:
             return {"error_msg": "Package process not found: {}".format(
                 package_process_uuid)}, 404
-        return {"package_process_uuid": p.uuid,
+        return {"package_process_uuid": str(p.uuid),
                 "status": p.status,
                 "error_msg": p.error_msg}
+
+
+@api_v1.route("/packages/status")
+class PackagesStatusList(Resource):
+
+    @api_v1.marshal_with(packages_status_list_get_return_model)
+    @api_v1.response(200, "OK")
+    def get(self):
+        r = list()
+        for p in PM.packager_list:
+            r.append({"package_process_uuid": str(p.uuid),
+                      "status": p.status,
+                      "error_msg": p.error_msg})
+        return {"package_processes": r}
 
 
 @api_v1.route("/projects")
