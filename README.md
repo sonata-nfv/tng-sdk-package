@@ -99,6 +99,12 @@ curl -X POST -v -H "Content-Type: multipart/form-data" \
     -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
     -F package="@misc/5gtango-ns-package-example-bad-checksum.tgo" \
     http://127.0.0.1:5099/api/v1/packages
+    
+# get status of all known packageing processes
+curl -X GET http://127.0.0.1:5099/api/v1/packages/status
+
+# get status of specific packageing process
+curl -X GET http://127.0.0.1:5099/api/v1/packages/status/<packager_process_uuid>
 ```
 
 ## Development
