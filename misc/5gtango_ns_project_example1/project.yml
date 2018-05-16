@@ -1,10 +1,10 @@
 descriptor_extension: yml
 files:
-- path: test_project1/sources/vnfd/vnfd-sample.yml
+- path: sources/vnfd/vnfd-sample.yml
   tags:
   - eu.5gtango
   type: application/vnd.5gtango.vnfd
-- path: test_project1/sources/nsd/nsd-sample.yml
+- path: sources/nsd/nsd-sample.yml
   tags:
   - eu.5gtango
   type: application/vnd.5gtango.nsd
