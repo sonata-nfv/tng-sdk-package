@@ -109,12 +109,6 @@ packages_parser.add_argument("skip_store",
                              default=False,
                              help="Skip catalog upload of contents (optional)")
 
-packages_post_return_model = api_v1.model("PackagesPostReturn", {
-    "package_process_uuid": fields.String(
-        description="UUID of started unpackaging process.",
-        required=True)
-})
-
 packages_status_item_get_return_model = api_v1.model(
     "PackagesStatusItemGetReturn",
     {"package_process_uuid": fields.String(
@@ -216,7 +210,7 @@ class Packages(Resource):
     Endpoint for unpackaging.
     """
     @api_v1.expect(packages_parser)
-    @api_v1.marshal_with(packages_post_return_model)
+    @api_v1.marshal_with(packages_status_item_get_return_model)
     @api_v1.response(200, "Successfully started unpackaging.")
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
@@ -243,7 +237,9 @@ class Packages(Resource):
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:
             LOG.exception("Unpackaging error:")
-        return {"package_process_uuid": p.uuid}
+        return {"package_process_uuid": str(p.uuid),
+                "status": p.status,
+                "error_msg": p.error_msg}
 
 
 @api_v1.route("/packages/status/<string:package_process_uuid>")

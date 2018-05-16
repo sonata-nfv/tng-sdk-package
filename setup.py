@@ -60,7 +60,9 @@ setup(name='tngsdk.package',
       zip_safe=False,
       entry_points={
           'console_scripts': [
-              'tng-package=tngsdk.package:main'
+              'tng-sdk-package=tngsdk.package:main',
+              'tng-package=tngsdk.package:main',
+              'tng-pkg=tngsdk.package:main'
           ],
       },
       test_suite='tngsdk',
