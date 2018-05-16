@@ -268,9 +268,34 @@ class Packager(object):
         return NapdRecord(error="_do_unpackage has to be overwritten")
 
     def _do_package(self):
-        LOG.error("_do_unpackage has to be overwritten")
+        LOG.error("_do_package has to be overwritten")
         # time.sleep(2)
         return NapdRecord(error="_do_package has to be overwritten")
+
+    def _pack_read_project_descriptor(self, project_path):
+        """
+        Searches and reads, validates project.y*l for packaging.
+        """
+        # find file
+        project_descriptor_path = search_for_file(
+            path=os.path.join(project_path, "project.y*l"))
+        if project_descriptor_path is None:
+            raise MissingFileException(
+                "project.y*l not found in {}".format(project_path))
+        # read file
+        with open(project_descriptor_path, "r") as f:
+            data = yaml.load(f)
+            # validate contents
+            for field in ["package", "files", "version"]:
+                if field not in data:
+                    raise MetadataValidationException(
+                        "{} section missing in PD".format(field))
+            for field in ["name", "vendor", "version"]:
+                if field not in data["package"]:
+                    raise MetadataValidationException(
+                        "{} field missing in PD/package".format(field))
+            return data
+        return None
 
 
 class TestPackager(Packager):
@@ -571,6 +596,10 @@ class TangoPackager(EtsiPackager):
         return False
 
     def _do_unpackage(self, wd=None):
+        """
+        Unpack a 5GTANGO package.
+        """
+        # TODO re-factor: single try block with multiple excepts.
         # extract package contents
         if wd is None:
             wd = extract_zip_file_to_temp(self.args.unpackage)
@@ -622,7 +651,22 @@ class TangoPackager(EtsiPackager):
         return napdr
 
     def _do_package(self):
-        LOG.warning("TangoPackager _do_package not implemented")
+        """
+        Pack a 5GTANGO project to a 5GTANGO package.
+        """
+        project_path = self.args.package
+        LOG.info("Creating 5GTANGO package using project: '{}'"
+                 .format(project_path))
+        try:
+            project_descriptor = self._pack_read_project_descriptor(
+                project_path)
+            if project_descriptor is None:
+                raise MissingMetadataException("No project descriptor found.")
+            LOG.error("PD: {}".format(project_descriptor))
+            # TODO continue here!
+        except BaseException as e:
+            LOG.error(str(e))
+            self.error_msg = str(e)
         return NapdRecord()
 
 # #########################

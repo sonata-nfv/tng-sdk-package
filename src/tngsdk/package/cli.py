@@ -40,11 +40,8 @@ LOG = logging.getLogger(os.path.basename(__file__))
 
 
 def dispatch(args):
-    # set default output paths
-    if args.output is None:
-            args.output = os.getcwd()
     # create packager object
-    p = PM.new_packager(args)
+    p = PM.new_packager(args, pkg_format=args.pkg_format)
     # trigger pack/unpack
     if args.package:
         p.package()
@@ -86,11 +83,11 @@ def parse_args(input_args=None):
 
     parser.add_argument(
         "--format",
-        help="Package format [5GTANGO|OSM]."
-        + "\nDefault: 5GTANGO",
+        help="Package format [eu.5gtango|eu.etsi|eu.etsi.osm]."
+        + "\nDefault: eu.5gtango",
         required=False,
-        default="5GTANGO",
-        dest="format")
+        default="eu.5gtango",
+        dest="pkg_format")
 
     parser.add_argument(
         "-v",
