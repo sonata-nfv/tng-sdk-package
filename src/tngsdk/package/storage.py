@@ -90,6 +90,15 @@ class TangoCatalogBackend(BaseStorageBackend):
                 r.append(os.path.join(wd, pc.get("source")))
         return r
 
+    def _post_yaml_data_to_catalog(self, endpoint, data):
+        url = "{}{}".format(self.cat_url, endpoint)
+        LOG.info("tng-cat-be: POST YAML data to {}"
+                 .format(url))
+        return requests.post(url,
+                             data=yaml.dump(data),
+                             headers={"Content-Type":
+                                      "application/x-yaml"})
+
     def _post_yaml_file_to_catalog(self, endpoint, path):
         url = "{}{}".format(self.cat_url, endpoint)
         LOG.info("tng-cat-be: POST YAML to {} content {}".format(url, path))
@@ -99,6 +108,15 @@ class TangoCatalogBackend(BaseStorageBackend):
                                  data=data,
                                  headers={"Content-Type":
                                           "application/x-yaml"})
+
+    def _post_json_data_to_catalog(self, endpoint, data):
+        url = "{}{}".format(self.cat_url, endpoint)
+        LOG.info("tng-cat-be: POST JSON data to {}"
+                 .format(url))
+        return requests.post(url,
+                             data=json.dumps(data),
+                             headers={"Content-Type":
+                                      "application/json"})
 
     def _post_json_file_to_catalog(self, endpoint, path):
         url = "{}{}".format(self.cat_url, endpoint)
@@ -137,14 +155,13 @@ class TangoCatalogBackend(BaseStorageBackend):
 
     def _post_package_descriptor(self, napdr):
         """
-        Uploads NAPD.yaml
+        Uploads annotated NAPDR, not the original NAPD.
         """
-        napd_path = napdr.metadata.get("_napd_path")
-        if napd_path is None:
-            raise StorageBackendFileException(
-                "tng-cat-be: NAPD.yaml not found. TangoCatalogBackend"
-                + " supports 5GTANGO packages only (no NAPDR upload yet).")
-        return self._post_yaml_file_to_catalog("/packages", napd_path)
+        # clean up NAPDR for catalogue upload
+        n = napdr.to_dict()
+        del n["metadata"]
+        del n["error"]
+        return self._post_yaml_data_to_catalog("/packages", n)
 
     def _post_vnf_descriptors(self, vnfd):
         return self._post_yaml_file_to_catalog("/vnfs", vnfd)
@@ -279,17 +296,12 @@ class TangoCatalogBackend(BaseStorageBackend):
         pkg_file_uuid = pkg_resp.json().get("uuid")
         # pkg_file_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
         # 7. upload mata data mapping (catalog support)
-        # 7.1 generate
+        # generate
         cat_metadata = self._build_catalog_metadata(
             napdr, nsds, vnfds, tstds, generic_files_uuids, pkg_file_uuid)
-        # 7.2 write to temp file (not nice, but fits to exp. bin. of tng-cat)
-        mapping_path = "/tmp/{}_mapping.json".format(pkg_uuid)
-        with open(mapping_path, "w") as f:
-            json.dump(cat_metadata, f)
-        LOG.debug("Wrote catalog mapping to {}".format(mapping_path))
-        # 7.3 upload temp file
-        map_resp = self._post_json_file_to_catalog(
-            "/tgo-packages/mappings", mapping_path)
+        # upload
+        map_resp = self._post_json_data_to_catalog(
+            "/tgo-packages/mappings", cat_metadata)
         if map_resp.status_code != 201 and map_resp.status_code != 200:
             raise StorageBackendUploadException(
                 "tng-cat-be: could not upload cat. mapping. Response: ({}) {}"
