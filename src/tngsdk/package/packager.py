@@ -55,6 +55,10 @@ class UnsupportedPackageFormatException(BaseException):
     pass
 
 
+class MissingInputException(BaseException):
+    pass
+
+
 class MissingMetadataException(BaseException):
     pass
 
@@ -654,7 +658,10 @@ class TangoPackager(EtsiPackager):
         """
         Pack a 5GTANGO project to a 5GTANGO package.
         """
-        project_path = self.args.package
+        if self.args is not None:
+            project_path = self.args.package
+        else:
+            raise MissingInputException("No project path.")
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
