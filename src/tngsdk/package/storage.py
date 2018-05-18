@@ -216,6 +216,27 @@ class TangoCatalogBackend(BaseStorageBackend):
         res["tgo_package_uuid"] = pkg_uuid
         return res
 
+    def _parse_cat_yaml_response(self, response):
+        try:
+            return yaml.load(response.text)
+        except BaseException as e:
+            LOG.exception()
+            raise StorageBackendResponseException(
+                "tng-cat-be: could not parse tng-cat resp.: '{}'"
+                .format(response.text))
+        return dict()
+
+    def _annotate_napdr_with_cat_uuids(
+            self, napdr, uuids):
+        """
+        Add UUIDs from catalog to package_content entries in
+        NAPDR data structure.
+        """
+        for pc in napdr.package_content:
+            uuid = uuids.get(pc.get("source"))
+            if uuid is not None:
+                pc["uuid"] = uuid
+
     def store(self, napdr, wd, pkg_file):
         """
         Stores the pushes given package and its files to the
@@ -225,36 +246,22 @@ class TangoCatalogBackend(BaseStorageBackend):
         :param pkg_file: path to the original package file
         :return napdr: updated/annotated napdr
         """
-
-        # 1. upload package descriptor
-        pkg_resp = self._post_package_descriptor(napdr)
-        if pkg_resp.status_code != 201:
-            raise StorageBackendUploadException(
-                "tng-cat-be: could not upload package descriptor: ({}) {}"
-                .format(pkg_resp.status_code, pkg_resp.text))
-        try:
-            pkg_yaml = yaml.load(pkg_resp.text)
-        except BaseException as e:
-            LOG.exception()
-            raise StorageBackendResponseException(
-                "tng-cat-be: could not parse YAML response from tng-cat.")
-        pkg_uuid = pkg_yaml.get("uuid")
-        if pkg_uuid is None:
-            raise StorageBackendUploadException(
-                "tng-cat-be: could not retrieve package UUID from tng-cat.")
-        LOG.info("tng-cat-ne: received PKG UUID from catalog: {}"
-                 .format(pkg_uuid))
-        pkg_url = "{}/packages/{}".format(self.cat_url, pkg_uuid)
-        # 2. collect and upload VNFDs
+        # 1. collect and upload VNFDs
         vnfds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.vnfd")
+        file_catalog_uuids = dict()
         for vnfd in vnfds:
             vnfd_resp = self._post_vnf_descriptors(vnfd)
             if vnfd_resp.status_code != 201:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload VNF descriptor: ({}) {}"
                     .format(vnfd_resp.status_code, vnfd_resp.text))
-        # 3. collect and upload NSDs
+            vnfd_uuid = self._parse_cat_yaml_response(vnfd_resp).get("uuid")
+            if vnfd_uuid is None:
+                raise StorageBackendUploadException(
+                    "tng-cat-be: could not retrieve UUID from tng-cat.")
+            file_catalog_uuids[vnfd.replace(wd, "")] = vnfd_uuid
+        # 2. collect and upload NSDs
         nsds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.nsd")
         for nsd in nsds:
@@ -263,7 +270,12 @@ class TangoCatalogBackend(BaseStorageBackend):
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload NS descriptor: ({}) {}"
                     .format(nsd_resp.status_code, nsd_resp.text))
-        # 4. collect and upload TESTDs
+            nsd_uuid = self._parse_cat_yaml_response(nsd_resp).get("uuid")
+            if nsd_uuid is None:
+                raise StorageBackendUploadException(
+                    "tng-cat-be: could not retrieve UUID from tng-cat.")
+            file_catalog_uuids[nsd.replace(wd, "")] = nsd_uuid
+        # 3. collect and upload TESTDs
         tstds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.tstd")
         for tstd in tstds:
@@ -272,10 +284,15 @@ class TangoCatalogBackend(BaseStorageBackend):
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload test descriptor: ({}) {}"
                     .format(tstd_resp.status_code, tstd_resp.text))
-        # 5. collect and upload all arbitrary other files
+            tstd_uuid = self._parse_cat_yaml_response(tstd_resp).get("uuid")
+            if tstd_uuid is None:
+                raise StorageBackendUploadException(
+                    "tng-cat-be: could not retrieve UUID from tng-cat.")
+            file_catalog_uuids[tstd.replace(wd, "")] = tstd_uuid
+        # 4. collect and upload all arbitrary other files
         generic_files = self._get_package_content_not_of_type(
             napdr, wd, "application/vnd.5gtango")
-        generic_files_uuids = dict()
+        gf_filenames_uuids = dict()
         for gf in generic_files:
             gf_resp = self._post_generic_file_to_catalog("/files", gf)
             if gf_resp.status_code != 201:
@@ -283,9 +300,24 @@ class TangoCatalogBackend(BaseStorageBackend):
                     "tng-cat-be: could not upload generic file ({}): ({}) {}"
                     .format(gf, gf_resp.status_code, gf_resp.text))
             gf_clean = os.path.basename(gf)
-            generic_files_uuids[gf_clean] = gf_resp.json().get("uuid")
+            gf_filenames_uuids[gf_clean] = gf_resp.json().get("uuid")
+            file_catalog_uuids[gf.replace(wd, "")] = gf_resp.json().get("uuid")
             LOG.debug("Generic file '{}' stored under UUID: {}".format(
-                gf_clean, generic_files_uuids[gf_clean]))
+                gf_clean, gf_filenames_uuids[gf_clean]))
+        # 5. upload package descriptor
+        self._annotate_napdr_with_cat_uuids(napdr, file_catalog_uuids)
+        pkg_resp = self._post_package_descriptor(napdr)
+        if pkg_resp.status_code != 201:
+            raise StorageBackendUploadException(
+                "tng-cat-be: could not upload package descriptor: ({}) {}"
+                .format(pkg_resp.status_code, pkg_resp.text))
+        pkg_uuid = self._parse_cat_yaml_response(pkg_resp).get("uuid")
+        if pkg_uuid is None:
+            raise StorageBackendUploadException(
+                "tng-cat-be: could not retrieve package UUID from tng-cat.")
+        LOG.info("tng-cat-ne: received PKG UUID from catalog: {}"
+                 .format(pkg_uuid))
+        pkg_url = "{}/packages/{}".format(self.cat_url, pkg_uuid)
         # 6. upload Package file *.tgo and get catalog UUID
         pkg_resp = self._post_pkg_file_to_catalog(
             "/tgo-packages", pkg_file)
@@ -298,7 +330,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         # 7. upload mata data mapping (catalog support)
         # generate
         cat_metadata = self._build_catalog_metadata(
-            napdr, nsds, vnfds, tstds, generic_files_uuids, pkg_file_uuid)
+            napdr, nsds, vnfds, tstds, gf_filenames_uuids, pkg_file_uuid)
         # upload
         map_resp = self._post_json_data_to_catalog(
             "/tgo-packages/mappings", cat_metadata)
@@ -310,6 +342,5 @@ class TangoCatalogBackend(BaseStorageBackend):
         napdr.metadata["_storage_uuid"] = pkg_uuid
         napdr.metadata["_storage_location"] = pkg_url
         napdr.metadata["_storage_pkg_file"] = pkg_file_uuid
-        napdr.metadata["_storage_generic_files"] = generic_files_uuids
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
