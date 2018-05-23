@@ -51,4 +51,4 @@ RUN python setup.py install
 # Runtime
 #
 EXPOSE 5099
-CMD ["tng-package","-s"]
+CMD ["tng-package","-s", "-v"]

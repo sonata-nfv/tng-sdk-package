@@ -216,7 +216,10 @@ class Packages(Resource):
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
         args = packages_parser.parse_args()
-        args.package_file_name = args.package.filename
+        LOG.info("POST to /packages w. args: {}".format(args))
+        if args.package.filename is None:
+            LOG.warning("Posted package filename was None.")
+            args.package.filename = "temp_pkg.tgo"
         temppkg_path = _write_to_temp_file(args.package)
         args.package = None
         args.unpackage = temppkg_path

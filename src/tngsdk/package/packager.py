@@ -661,7 +661,8 @@ class TangoPackager(EtsiPackager):
         if self.args is not None:
             project_path = self.args.package
         else:
-            raise MissingInputException("No project path.")
+            LOG.error("No project path. Abort.")
+            return NapdRecord()
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
