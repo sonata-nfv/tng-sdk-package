@@ -184,35 +184,7 @@ class TangoCatalogBackend(BaseStorageBackend):
                 res["name"] = data["name"]
                 res["version"] = data["version"]
         except BaseException as e:
-            LOG.error(str(e))
-            raise StorageBackendFileException(
-                "Couldn't get ID triple from descriptor {}"
-                .format(path))
-        return res
-
-    def _build_catalog_metadata(
-            self, napdr,
-            nsds, vnfds, tstds,
-            generic_files_uuids, pkg_uuid):
-        """
-        Build dict with additional data for catalog mapping.
-        see: https://github.com/sonata-nfv/tng-sdk-package/issues/14
-        """
-        res = dict()
-        res["pd"] = {"vendor": napdr.vendor,
-                     "name": napdr.name,
-                     "version": napdr.version}
-        res["nsds"] = [
-            self._get_id_triple_from_descriptor_file(f) for f in nsds]
-        res["vnfds"] = [
-            self._get_id_triple_from_descriptor_file(f) for f in vnfds]
-        res["testds"] = [
-            self._get_id_triple_from_descriptor_file(f) for f in tstds]
-        res["deps"] = []
-        res["files"] = [
-            {"file_uuid": v, "file_name": k} for
-            k, v in generic_files_uuids.items()]
-        res["tgo_package_uuid"] = pkg_uuid
+            return None
         return res
 
     def _parse_cat_yaml_response(self, response):
@@ -235,6 +207,26 @@ class TangoCatalogBackend(BaseStorageBackend):
             uuid = uuids.get(pc.get("source"))
             if uuid is not None:
                 pc["uuid"] = uuid
+
+    def _annotate_napdr_with_id_triples(self, napdr, wd):
+        """
+        Add vendor.name.version triples to the package_content
+        entries of the NAPDR to support the catalogs.
+        """
+        for pc in napdr.package_content:
+            triple = self._get_id_triple_from_descriptor_file(
+                os.path.join(wd, pc.get("source")))
+            if triple is not None:
+                # annotate
+                pc["id"] = triple
+
+    def _annotate_napdr_with_pkg_file(
+            self, napdr, pkg_file_uuid, pkg_file):
+        """
+        Add UUID of uploaded package file to NAPDR.
+        """
+        napdr.package_file_uuid = pkg_file_uuid
+        napdr.package_file_name = os.path.basename(pkg_file)
 
     def store(self, napdr, wd, pkg_file):
         """
@@ -303,8 +295,19 @@ class TangoCatalogBackend(BaseStorageBackend):
             file_catalog_uuids[gf.replace(wd, "")] = gf_resp.json().get("uuid")
             LOG.debug("Generic file '{}' stored under UUID: {}".format(
                 gf_clean, gf_filenames_uuids[gf_clean]))
-        # 5. upload package descriptor
+        # 5. upload Package file *.tgo and get catalog UUID
+        pkg_resp = self._post_pkg_file_to_catalog(
+            "/tgo-packages", pkg_file)
+        if pkg_resp.status_code != 201:
+            raise StorageBackendUploadException(
+                "tng-cat-be: could not upload package. Response: {}"
+                .format(pkg_resp.status_code))
+        pkg_file_uuid = pkg_resp.json().get("uuid")
+        # 6. upload package descriptor
+        # annotate package descriptor with catalog locations
         self._annotate_napdr_with_cat_uuids(napdr, file_catalog_uuids)
+        self._annotate_napdr_with_id_triples(napdr, wd)
+        self._annotate_napdr_with_pkg_file(napdr, pkg_file_uuid, pkg_file)
         pkg_resp = self._post_package_descriptor(napdr)
         if pkg_resp.status_code != 201:
             raise StorageBackendUploadException(
@@ -317,29 +320,8 @@ class TangoCatalogBackend(BaseStorageBackend):
         LOG.info("tng-cat-ne: received PKG UUID from catalog: {}"
                  .format(pkg_uuid))
         pkg_url = "{}/packages/{}".format(self.cat_url, pkg_uuid)
-        # 6. upload Package file *.tgo and get catalog UUID
-        pkg_resp = self._post_pkg_file_to_catalog(
-            "/tgo-packages", pkg_file)
-        if pkg_resp.status_code != 201:
-            raise StorageBackendUploadException(
-                "tng-cat-be: could not upload package. Response: {}"
-                .format(pkg_resp.status_code))
-        pkg_file_uuid = pkg_resp.json().get("uuid")
-        # pkg_file_url = "{}/tgo-packages/{}".format(self.cat_url, pkg_uuid)
-        # 7. upload mata data mapping (catalog support)
-        # generate
-        cat_metadata = self._build_catalog_metadata(
-            napdr, nsds, vnfds, tstds, gf_filenames_uuids, pkg_file_uuid)
-        # upload
-        map_resp = self._post_json_data_to_catalog(
-            "/tgo-packages/mappings", cat_metadata)
-        if map_resp.status_code != 201 and map_resp.status_code != 200:
-            raise StorageBackendUploadException(
-                "tng-cat-be: could not upload cat. mapping. Response: ({}) {}"
-                .format(map_resp.status_code, map_resp.text))
         # updated/annotated napdr
         napdr.metadata["_storage_uuid"] = pkg_uuid
         napdr.metadata["_storage_location"] = pkg_url
-        napdr.metadata["_storage_pkg_file"] = pkg_file_uuid
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
