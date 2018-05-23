@@ -197,8 +197,9 @@ def on_packaging_done(packager):
 
 
 def _write_to_temp_file(package_data):
-    fd, path = tempfile.mkstemp(suffix=".pkg")
-    os.close(fd)
+    # create a temp directory
+    path_dest = tempfile.mkdtemp()
+    path = os.path.join(path_dest, package_data.filename)
     package_data.save(path)
     LOG.debug("Written uploaded package file to {}".format(path))
     return path
@@ -215,6 +216,7 @@ class Packages(Resource):
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
         args = packages_parser.parse_args()
+        args.package_file_name = args.package.filename
         temppkg_path = _write_to_temp_file(args.package)
         args.package = None
         args.unpackage = temppkg_path

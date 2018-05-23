@@ -130,8 +130,7 @@ class TangoCatalogBackend(BaseStorageBackend):
 
     def _post_pkg_file_to_catalog(self, endpoint, path):
         url = "{}{}".format(self.cat_url, endpoint)
-        cd_str = "attachment; filename={}.tgo".format(os.path.basename(path))
-        cd_str = cd_str.replace(".pkg", "")  # fix to not loose file ext.
+        cd_str = "attachment; filename={}".format(os.path.basename(path))
         LOG.info("tng-cat-be: POST PKG to {} content {} using {}"
                  .format(url, path, cd_str))
         with open(path, "rb") as f:
