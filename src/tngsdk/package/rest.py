@@ -199,7 +199,7 @@ def on_packaging_done(packager):
 def _write_to_temp_file(package_data):
     # create a temp directory
     path_dest = tempfile.mkdtemp()
-    path = os.path.join(path_dest, package_data.filename)
+    path = os.path.join(path_dest, os.path.basename(package_data.filename))
     package_data.save(path)
     LOG.debug("Written uploaded package file to {}".format(path))
     return path
