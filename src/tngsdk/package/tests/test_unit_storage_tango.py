@@ -37,27 +37,26 @@ from requests.exceptions import RequestException
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.storage import TangoCatalogBackend
+from tngsdk.package.tests.fixtures import misc_file
 
 
 class MockResponse(object):
-        pass
+
+    def __init__(self):
+        self.status_code = 201
+        self.text = "uuid: 1111"
+
+    def json(self):
+        return {"uuid": "2222"}
 
 
-def mock_requests_post(url, json):
-    if url != "https://test.local:8000/cb":
+def mock_requests_post(url, **kwargs):
+    if ("http://127.0.0.1:4011/catalogues/api/v2/" not in url
+            and "http://tng-cat:4011/catalogues/api/v2/" not in url):
         raise RequestException("bad url")
-    if "event_name" not in json:
-        raise RequestException("bad request")
-    if "package_id" not in json:
-        raise RequestException("bad request")
-    if "package_location" not in json:
-        raise RequestException("bad request")
-    if "package_metadata" not in json:
-        raise RequestException("bad request")
-    if "package_process_uuid" not in json:
-        raise RequestException("bad request")
+    assert(kwargs.get("data") is not None)
+    assert(kwargs.get("headers") is not None)
     mr = MockResponse()
-    mr.status_code = 200
     return mr
 
 
@@ -68,11 +67,14 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         self.patcher = patch("requests.post", mock_requests_post)
         # we need a packager to setup a environment to work on
         self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example.tgo")
         self.p = PM.new_packager(
             self.default_args,
             pkg_format="eu.5gtango",
             storage_backend=None
         )
+        # patch the requests lib to not do real requests
         self.patcher.start()
 
     def tearDown(self):
@@ -83,6 +85,18 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         self.assertIsNotNone(tcb)
 
     def test_store(self):
-        # run _do_unpackage on example package
+        # instantiate storage backend
         tcb = TangoCatalogBackend({})
         self.assertIsNotNone(tcb)
+        # unpack package and keep active working dir.
+        napdr = self.p._do_unpackage()
+        wd = napdr.metadata.get("_napd_path").replace(
+            "/TOSCA-Metadata/NAPD.yaml", "")
+        # call store using active working dir
+        new_napdr = tcb.store(
+            napdr, wd, self.default_args.unpackage)
+        self.assertEqual(new_napdr.package_file_name,
+                         "5gtango-ns-package-example.tgo")
+        self.assertEqual(new_napdr.package_file_uuid, "2222")
+        self.assertEqual(new_napdr.metadata.get("_storage_uuid"), "1111")
+        self.assertIsNotNone(new_napdr.metadata.get("_storage_location"))

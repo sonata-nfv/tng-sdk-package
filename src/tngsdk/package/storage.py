@@ -321,7 +321,7 @@ class TangoCatalogBackend(BaseStorageBackend):
                  .format(pkg_uuid))
         pkg_url = "{}/packages/{}".format(self.cat_url, pkg_uuid)
         # updated/annotated napdr
-        napdr.metadata["_storage_uuid"] = pkg_uuid
+        napdr.metadata["_storage_uuid"] = str(pkg_uuid)
         napdr.metadata["_storage_location"] = pkg_url
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
