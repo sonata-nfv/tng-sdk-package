@@ -37,6 +37,8 @@ MAINTAINER 5GTANGO
 #
 # URL to the catalogue enpoint to which package contents are uploaded
 ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+# Disables uploading of artifacts after unpackaging
+ENV SKIP_STORE False
 
 
 #
