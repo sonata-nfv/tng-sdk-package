@@ -209,6 +209,8 @@ class Packager(object):
         self.result = NapdRecord()
         LOG.info("Packager created: {}".format(self))
         LOG.info("Packager args: {}".format(self.args))
+        if self.storage_backend is None:
+            LOG.warning("Disabled storage backend: skip_store=True?")
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)

@@ -234,7 +234,8 @@ class Packages(Resource):
         # instantiate storage backend
         # TODO make configurable, for now TangoCatalogBackend hard coded
         sb = None
-        if not args.skip_store:
+        if (not args.skip_store
+                and not os.environ.get("SKIP_STORE", False)):
             sb = TangoCatalogBackend(args)
         # instantiate packager
         p = PM.new_packager(args, storage_backend=sb)

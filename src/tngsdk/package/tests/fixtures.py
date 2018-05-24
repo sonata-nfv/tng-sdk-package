@@ -1,4 +1,4 @@
-#  Copyright (c) 2015 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+#  Copyright (c) 2018 SONATA-NFV, 5GTANGO, Paderborn University
 # ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,28 +29,15 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-FROM python:3.6-slim
-MAINTAINER 5GTANGO
-
-#
-# Configurations
-#
-# URL to the catalogue enpoint to which package contents are uploaded
-ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
-# Disables uploading of artifacts after unpackaging
-ENV SKIP_STORE False
 
 
-#
-# Installation
-#
-RUN pip install flake8
-ADD . /tng-sdk-package
-WORKDIR /tng-sdk-package
-RUN python setup.py install
+import os
 
-#
-# Runtime
-#
-EXPOSE 5099
-CMD ["tng-package","-s", "-v"]
+
+def misc_file(filename):
+    """
+    Returns absolute path to given file in misc/ folder.
+    """
+    abs_path = os.path.dirname(__file__).replace(
+        "src/tngsdk/package/tests", "")
+    return os.path.join(abs_path, "misc/{}".format(filename))

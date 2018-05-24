@@ -35,6 +35,7 @@ import tempfile
 import os
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
+from tngsdk.package.tests.fixtures import misc_file
 
 
 TOSCA_META = """TOSCA-Meta-Version: 1.0
@@ -177,7 +178,7 @@ package_content:
 """  # noqa: E501
 
 
-class TngSdkPackageTangoPackagerTest(unittest.TestCase):
+class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
 
     def _create_wd(self,
                    tosca_meta_path="TOSCA-Metadata/TOSCA.meta",
@@ -247,9 +248,6 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
         self.default_args = parse_args([])
         self.p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
         self.assertIn("TangoPackager", str(type(self.p)))
-
-    def tearDown(self):
-        pass
 
     def test_read_correct_metadata(self):
         # create correct work environment
@@ -421,3 +419,38 @@ class TngSdkPackageTangoPackagerTest(unittest.TestCase):
 
     def test_do_package(self):
         pass
+
+
+class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
+    """
+    Tests using real *.tgo files from misc/ folder.
+    """
+
+    def test_do_unpackage_good_package(self):
+        self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example.tgo")
+        self.p = PM.new_packager(
+            self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNone(r.error)
+
+    def test_do_unpackage_bad_checksum(self):
+        self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example-bad-checksum.tgo")
+        self.p = PM.new_packager(
+            self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNotNone(r.error)
+        self.assertIn("Checksum mismatch!", r.error)
+
+    def test_do_unpackage_bad_metadata(self):
+        self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example-malformed.tgo")
+        self.p = PM.new_packager(
+            self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNotNone(r.error)
+        self.assertIn("failed", r.error)
