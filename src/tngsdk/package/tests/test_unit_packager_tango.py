@@ -463,3 +463,17 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
         r = p._do_package()
         self.assertIsNone(r.error)
+        # check structure of wd
+        wd = r._project_wd
+        self.assertTrue(os.path.exists(wd))
+        self.assertTrue(os.path.exists(
+            os.path.join(wd, "TOSCA-Metadata")))
+        self.assertTrue(os.path.exists(
+            os.path.join(wd, "Definitions")))
+        for pc in r.package_content:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, os.path.dirname(
+                        pc.get("source")))))
+        # check generated files
+        # TODO

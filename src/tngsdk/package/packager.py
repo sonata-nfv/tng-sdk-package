@@ -213,7 +213,7 @@ class Packager(object):
         self.args = args
         self.result = NapdRecord()
         LOG.info("Packager created: {}".format(self))
-        LOG.info("Packager args: {}".format(self.args))
+        LOG.debug("Packager args: {}".format(self.args))
         if (self.storage_backend is None
                 and self.args.unpackage is not None):
             LOG.warning("Disabled storage backend: skip_store=True?")
@@ -654,6 +654,26 @@ class TangoPackager(EtsiPackager):
             raise MetadataValidationException(m)
         return False
 
+    def _pack_create_package_directory_tree(self, napdr):
+        """
+        Generates directory tree in given working dir.
+        5GTANGO package format specific.
+        """
+        def makedirs(p):
+            if not os.path.exists(p):
+                LOG.debug("Creating: {}".format(p))
+                os.makedirs(p)
+
+        wd = napdr._project_wd
+        # TOSCA-Metadata directory
+        makedirs(os.path.join(wd, "TOSCA-Metadata"))
+        # Definitions directory
+        makedirs(os.path.join(wd, "Definitions"))
+        # Custom directories based on user project
+        for pc in napdr.package_content:
+            makedirs(os.path.join(
+                wd, os.path.dirname(pc.get("source"))))
+
     def _do_unpackage(self, wd=None):
         """
         Unpack a 5GTANGO package.
@@ -730,9 +750,17 @@ class TangoPackager(EtsiPackager):
                 raise MissingMetadataException("No project descriptor found.")
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
+            LOG.debug("Generated NAPDR: {}".format(napdr))
+            # 3. create a temporary working directory
+            napdr._project_wd = tempfile.mkdtemp()
+            LOG.debug("Created temp. working directory: {}"
+                      .format(napdr._project_wd))
+            # TODO refactor: from here on the packaging code is format specific
+            # 4. generate package's directory tree
+            self._pack_create_package_directory_tree(napdr)
             # TODO continue here!
-            LOG.error("PD: {}".format(project_descriptor))
-            LOG.error("NAPDR: {}".format(napdr))
+            LOG.warning("ATTENTION: Packaging not fully implemented yet."
+                        + " No package generated.")
             return napdr
         except BaseException as e:
             LOG.error(str(e))
