@@ -31,6 +31,7 @@
 # partner consortium (www.5gtango.eu).
 import logging
 import os
+import shutil
 import threading
 import uuid
 import zipfile
@@ -674,6 +675,18 @@ class TangoPackager(EtsiPackager):
             makedirs(os.path.join(
                 wd, os.path.dirname(pc.get("source"))))
 
+    def _pack_copy_files_to_package_directory_tree(self, pp, napdr):
+        """
+        Copy files from project to package wd.
+        Improvement: Maybe we could speed this up with symbolic links?
+        """
+        wd = napdr._project_wd
+        for pc in napdr.package_content:
+            s = os.path.join(pp, pc.get("_project_source"))
+            d = os.path.join(wd, pc.get("source"))
+            LOG.debug("Copying {}\n\t to {}".format(s, d))
+            shutil.copyfile(s, d)
+
     def _do_unpackage(self, wd=None):
         """
         Unpack a 5GTANGO package.
@@ -758,6 +771,9 @@ class TangoPackager(EtsiPackager):
             # TODO refactor: from here on the packaging code is format specific
             # 4. generate package's directory tree
             self._pack_create_package_directory_tree(napdr)
+            # 5. copy project files to package tree
+            self._pack_copy_files_to_package_directory_tree(
+                project_path, napdr)
             # TODO continue here!
             LOG.warning("ATTENTION: Packaging not fully implemented yet."
                         + " No package generated.")

@@ -476,4 +476,8 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
                     wd, os.path.dirname(
                         pc.get("source")))))
         # check generated files
-        # TODO
+        # TODO check for NAPD, TOSCA, ETSI files
+        for pc in r.package_content:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, pc.get("source"))))
