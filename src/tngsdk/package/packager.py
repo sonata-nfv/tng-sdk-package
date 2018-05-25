@@ -209,7 +209,8 @@ class Packager(object):
         self.result = NapdRecord()
         LOG.info("Packager created: {}".format(self))
         LOG.info("Packager args: {}".format(self.args))
-        if self.storage_backend is None:
+        if (self.storage_backend is None
+                and self.args.unpackage is not None):
             LOG.warning("Disabled storage backend: skip_store=True?")
 
     def __repr__(self):
@@ -668,6 +669,8 @@ class TangoPackager(EtsiPackager):
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
+            if project_path is None or project_path == "None":
+                raise MissingInputException("No project path. Abort.")
             project_descriptor = self._pack_read_project_descriptor(
                 project_path)
             if project_descriptor is None:

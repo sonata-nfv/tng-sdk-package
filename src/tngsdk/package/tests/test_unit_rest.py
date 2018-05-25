@@ -40,8 +40,21 @@ from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
 from tngsdk.package.packager import PM
 
 
+class MockArgs(object):
+    def __init__(self):
+        self.package = None
+        self.unpackage = None
+        self.callback_url = "https://test.local:8000/cb"
+
+    def __contains__(self, key):
+        return key in self.__dict__
+
+    def get(self, key):
+        return self.__dict__.get(key)
+
+
 class MockResponse(object):
-        pass
+    pass
 
 
 def mock_requests_post(url, json):
@@ -78,7 +91,12 @@ class TngSdkPackageRestTest(unittest.TestCase):
 
     def test_project_v1_endpoint(self):
         # do a malformed post
-        r = self.app.post("/api/v1/projects")
+        r = self.app.post("/api/v1/projects",
+                          content_type="multipart/form-data",
+                          data={"project": (None,  # TODO upload real project
+                                            "5gtango-ns-project-example.zip"),
+                                "callback_url": "https://test.local:8000/cb",
+                                "skip_store": True})
         self.assertEqual(r.status_code, 501)
 
     def test_package_v1_endpoint(self):
@@ -140,12 +158,14 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(r2.status_code, 404)
 
     def test_on_packaging_done(self):
-        p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
+        args = MockArgs()
+        p = PM.new_packager(args)
         s = on_packaging_done(p)
         self.assertEqual(s, 200)
 
     def test_on_unpackaging_done(self):
-        p = PM.new_packager({"callback_url": "https://test.local:8000/cb"})
+        args = MockArgs()
+        p = PM.new_packager(args)
         s = on_unpackaging_done(p)
         self.assertEqual(s, 200)
 
