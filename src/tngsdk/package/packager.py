@@ -737,7 +737,7 @@ class TangoPackager(EtsiPackager):
         except BaseException as e:
             LOG.error(str(e))
             self.error_msg = str(e)
-        return NapdRecord()
+            return NapdRecord(error=str(e))
 
 # #########################
 # Helpers
