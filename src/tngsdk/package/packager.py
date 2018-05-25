@@ -51,6 +51,11 @@ from tngsdk.package.helper import dictionary_deep_merge
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
+DESCRIPTOR_MIME_TYPES = ["application/vnd.5gtango.nsd",
+                         "application/vnd.5gtango.vnfd",
+                         "application/vnd.5gtango.tstd"]
+
+
 class UnsupportedPackageFormatException(BaseException):
     pass
 
@@ -301,8 +306,55 @@ class Packager(object):
                 if field not in data["package"]:
                     raise MetadataValidationException(
                         "{} field missing in PD/package".format(field))
+            # check if all linked files exist
+            for f in data.get("files"):
+                if (f.get("path") is None
+                        or not os.path.isfile(
+                            os.path.join(project_path, f.get("path")))):
+                    raise MissingFileException(
+                        "Could not find file linked in project.yml: {}"
+                        .format(f.get("path")))
             return data
         return None
+
+    def _pack_create_napdr(self, pp, pd):
+        """
+        Creates a NAPDR for the new package based on the given
+        project path (pp) and project descriptor (pd).
+
+        NAPDR is annotated with info. like '_project_source' to
+        temp. link between project files and target package.
+        """
+        # create initial NAPDR with package contents of project (name etc.)
+        napdr = NapdRecord(**pd.get("package"))
+        # add release date and time
+        napdr.release_date_time = pyrfc3339.generate(
+            datetime.datetime.now(), accept_naive=True)
+        # add package content
+        for f in pd.get("files"):
+            r = {"source": self._pack_package_source_path(f),
+                 "algorithm": "SHA-256",
+                 "hash": file_hash(os.path.join(pp, f.get("path"))),
+                 "content-type": f.get("type", "text/plain"),
+                 "tags": f.get("tags", list()),
+                 "_project_source": f.get("path")
+                 }
+            napdr.package_content.append(r)
+        return napdr
+
+    def _pack_package_source_path(self, f):
+        """
+        Returns the path of the given file in the
+        generated package.
+        We need to translate here, because known
+        descriptor formats are moved to the Definitions/ folder
+        to be TOSCA compatible.
+        """
+        if f.get("type") in DESCRIPTOR_MIME_TYPES:
+            # translate
+            return os.path.join("Definitions/", f.get("path"))
+        # use original
+        return f.get("path")
 
 
 class TestPackager(Packager):
@@ -669,14 +721,19 @@ class TangoPackager(EtsiPackager):
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
+            # 1. find and load project descriptor
             if project_path is None or project_path == "None":
                 raise MissingInputException("No project path. Abort.")
             project_descriptor = self._pack_read_project_descriptor(
                 project_path)
             if project_descriptor is None:
                 raise MissingMetadataException("No project descriptor found.")
-            LOG.error("PD: {}".format(project_descriptor))
+            # 2. create a NAPDR for the new package
+            napdr = self._pack_create_napdr(project_path, project_descriptor)
             # TODO continue here!
+            LOG.error("PD: {}".format(project_descriptor))
+            LOG.error("NAPDR: {}".format(napdr))
+            return napdr
         except BaseException as e:
             LOG.error(str(e))
             self.error_msg = str(e)
