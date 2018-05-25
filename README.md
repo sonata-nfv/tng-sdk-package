@@ -19,13 +19,17 @@ $ python setup.py install
 
 Runs the packager locally from the command line. Display detailed usage information with:
 
+* `Note:` Currently only package creation is supported in this mode.
+
 ```bash
 tng-package -h
 ```
 
 ### Service mode
 
-Runs the packager as a micro service that exposes a RESTful API.
+Runs the packager as a micro service that exposes a REST API.
+
+* `Note:` Currently only unpackaging is supported in this mode.
 
 #### Bare metal
 ```bash
@@ -41,38 +45,16 @@ pipeline/build/build.sh
 docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
 ```
 
-## Configuration
-
-### CLI mode
-
-TODO
-
-### Service mode
-
-The `tng-sdk-package` service can be configured through environment variables, e.g., placed in its Dockerfile.
-
-```bash
-# URL to the catalogue enpoint to which package contents are uploaded
-ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
-```
-
-## Documentation
-
-TODO (e.g. link to wiki page)
-
 ## Examples
 
-### CLI Mode
+### Packaging (using CLI mode)
 
 ```sh
-# unpack valid package
-tng-package -u misc/5gtango-ns-package-example.tgo -o /tmp -v
-
-# unpack invalid package
-tng-package -u 5gtango-ns-package-example-malformed.tgo -o /tmp -v
+# package a NS project
+tng-pkg -p misc/5gtango_ns_project_example1
 ```
 
-### REST Mode
+### Unpackaging (using service mode with REST API)
 
 ```sh
 # terminal 1 (tng-package service)

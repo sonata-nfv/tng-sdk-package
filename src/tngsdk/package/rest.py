@@ -129,6 +129,25 @@ packages_status_list_get_return_model = api_v1.model(
         fields.Nested(packages_status_item_get_return_model)), }
 )
 
+
+projects_parser = api_v1.parser()
+projects_parser.add_argument("project",
+                             location="files",
+                             type=FileStorage,
+                             required=True,
+                             help="Uploaded project archive")
+packages_parser.add_argument("callback_url",
+                             location="form",
+                             required=False,
+                             default=None,
+                             help="URL called after unpackaging (optional)")
+packages_parser.add_argument("format",
+                             location="form",
+                             required=False,
+                             default="eu.5gtango",
+                             help="Package format (optional)")
+
+
 ping_get_return_model = api_v1.model("PingGetReturn", {
     "ping": fields.String(
         description="pong",
@@ -283,9 +302,22 @@ class Project(Resource):
     """
     Endpoint for package creation.
     """
+    @api_v1.expect(projects_parser)
     def post(self):
-        LOG.warning("endpoint not implemented")
-        p = PM.new_packager(None)
+        LOG.warning("endpoint not implemented yet")
+        args = projects_parser.parse_args()
+        LOG.info("POST to /projects w. args: {}".format(args))
+        args.package = None  # fill with path to uploaded project
+        args.unpackage = None
+        # pass CLI args to REST args
+        args.offline = False
+        args.no_checksums = False
+        args.no_autoversion = False
+        if app.cliargs is not None:
+            args.offline = app.cliargs.offline
+            args.no_checksums = app.cliargs.no_checksums
+            args.no_autoversion = app.cliargs.no_autoversion
+        p = PM.new_packager(args)
         p.package(callback_func=on_packaging_done)
         return "not implemented", 501
 
