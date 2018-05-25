@@ -423,7 +423,8 @@ class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
 
 class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
     """
-    Tests using real *.tgo files from misc/ folder.
+    Unpack. tests using real *.tgo files from misc/ folder.
+    Pack tests using real projects from misc folder.
     """
 
     def test_do_unpackage_good_package(self):
@@ -454,3 +455,29 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         r = self.p._do_unpackage()
         self.assertIsNotNone(r.error)
         self.assertIn("failed", r.error)
+
+    def test_do_package_good_project(self):
+        self.default_args = parse_args([])
+        self.default_args.package = misc_file(
+            "5gtango_ns_project_example1")
+        p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
+        r = p._do_package()
+        self.assertIsNone(r.error)
+        # check structure of wd
+        wd = r._project_wd
+        self.assertTrue(os.path.exists(wd))
+        self.assertTrue(os.path.exists(
+            os.path.join(wd, "TOSCA-Metadata")))
+        self.assertTrue(os.path.exists(
+            os.path.join(wd, "Definitions")))
+        for pc in r.package_content:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, os.path.dirname(
+                        pc.get("source")))))
+        # check generated files
+        # TODO check for NAPD, TOSCA, ETSI files
+        for pc in r.package_content:
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, pc.get("source"))))
