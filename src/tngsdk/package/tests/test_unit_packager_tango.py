@@ -460,6 +460,8 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.default_args = parse_args([])
         self.default_args.package = misc_file(
             "5gtango_ns_project_example1")
+        self.default_args.output = os.path.join(tempfile.mkdtemp(),
+                                                "test.tgo")
         p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
         r = p._do_package()
         self.assertIsNone(r.error)
@@ -476,7 +478,6 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
                     wd, os.path.dirname(
                         pc.get("source")))))
         # check generated files
-        # TODO check for NAPD, TOSCA, ETSI files
         for pc in r.package_content:
             self.assertTrue(os.path.exists(
                 os.path.join(
@@ -490,3 +491,44 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.assertTrue(os.path.exists(
                 os.path.join(
                     wd, "TOSCA-Metadata/TOSCA.meta")))
+        # check *.tgo file
+        self.assertTrue(os.path.exists(self.default_args.output))
+
+
+class TngSdkPackageTangoPackagerEndToEndTest(unittest.TestCase):
+    """
+    Package/unpackage end to end.
+    """
+
+    def test_cli_package_cli_unpackage(self):
+        pass
+
+    def test_rest_package_cli_unpackage(self):
+        pass
+
+    def test_cli_package_rest_unpackage(self):
+        pass
+
+    def test_rest_package_rest_unpackage(self):
+        pass
+
+    def test_direct_call_package_direct_call_unpackage(self):
+        # 1. package
+        self.default_args = parse_args([])
+        self.default_args.package = misc_file(
+            "5gtango_ns_project_example1")
+        self.default_args.output = os.path.join(tempfile.mkdtemp(),
+                                                "test.tgo")
+        pkg_path = self.default_args.output
+        p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
+        r = p._do_package()
+        self.assertIsNone(r.error)
+        # check *.tgo file
+        self.assertTrue(os.path.exists(self.default_args.output))
+        # 2. unpackage
+        self.default_args = parse_args([])
+        self.default_args.unpackage = pkg_path
+        self.p = PM.new_packager(
+            self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNone(r.error)
