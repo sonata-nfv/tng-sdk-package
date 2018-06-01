@@ -481,3 +481,6 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
             self.assertTrue(os.path.exists(
                 os.path.join(
                     wd, pc.get("source"))))
+        self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, "TOSCA-Metadata/NAPD.yaml")))
