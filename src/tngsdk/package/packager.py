@@ -130,6 +130,24 @@ class NapdRecord(object):
     def to_dict(self):
         return self.__dict__.copy()
 
+    def to_clean_dict(self):
+        """
+        Return a cleaned-up version of the dict.
+        """
+        d = self.to_dict()
+        # root
+        if "error" in d:
+            del d["error"]
+        if "metadata" in d:
+            del d["metadata"]
+        if "_project_wd" in d:
+            del d["_project_wd"]
+        # package content
+        for pc in d.get("package_content"):
+            if "_project_source" in pc:
+                del pc["_project_source"]
+        return d
+
     @property
     def pkg_id(self):
         pass  # TODO
@@ -687,6 +705,98 @@ class TangoPackager(EtsiPackager):
             LOG.debug("Copying {}\n\t to {}".format(s, d))
             shutil.copyfile(s, d)
 
+    def _pack_get_package_type(self, napdr):
+        """
+        Guess package type based on contents.
+        if NSD exists -> application/vnd.5gtango.package.nsp
+        if VNF exists -> application/vnd.5gtango.package.vnfp
+        if TSTD exists -> application/vnd.5gtango.package.tdp
+        else -> error
+        """
+        types = [pc.get("content-type") for pc in napdr.package_content]
+        if self.args.pkg_format != "eu.5gtango":
+            raise BaseException(
+                "Package format: {} not supported (eu.5gtango only)."
+                .format(self.args.pkg_format))
+        if "application/vnd.5gtango.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.5gtango.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.5gtango.tstd" in types:
+            return "application/vnd.5gtango.package.tdp"
+        raise BaseException("Could not detect package type!"
+                            + " No NSD, VNFD or TSTD found.")
+
+    def _pack_write_napd(self, napdr, name="TOSCA-Metadata/NAPD.yaml"):
+        wd = napdr._project_wd
+        data = napdr.to_clean_dict()
+        path = os.path.join(wd, name)
+        # validate
+        if self.args.offline:
+            LOG.warning("Skipping NAPD validation (--offline)")
+            return  # skip validation step
+        if not validate_yaml_online(data):
+            raise NapdNotValidException
+        LOG.debug("Writing NAPD to: {}".format(path))
+        with open(path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+        return name
+
+    def _pack_gen_write_etsi_manifest(self, napdr, name="etsi_manifest.mf"):
+        # TODO fix ETSI manifest naming
+        wd = napdr._project_wd
+        # collect data for manifest block file
+        data = list()
+        b0 = None
+        if napdr.package_type == "application/vnd.5gtango.package.nsp":
+            b0 = {"ns_product_name": napdr.name,
+                  "ns_provider_id": napdr.vendor,
+                  "ns_package_version": napdr.version,
+                  "ns_release_date_time": napdr.release_date_time}
+        elif napdr.package_type == "application/vnd.5gtango.package.vnfp":
+            b0 = {"vnf_product_name": napdr.name,
+                  "vnf_provider_id": napdr.vendor,
+                  "vnf_package_version": napdr.version,
+                  "vnf_release_date_time": napdr.release_date_time}
+        elif napdr.package_type == "application/vnd.5gtango.package.tstp":
+            b0 = {"tst_product_name": napdr.name,
+                  "tst_provider_id": napdr.vendor,
+                  "tst_package_version": napdr.version,
+                  "tst_release_date_time": napdr.release_date_time}
+        data.append(b0)
+        for pc in napdr.package_content:
+            bN = {"Source": pc.get("source"),
+                  "Algorithm": pc.get("algorithm"),
+                  "Hash": pc.get("hash")}
+            data.append(bN)
+        # write file
+        path = os.path.join(wd, name)
+        LOG.debug("Writing ETSI manifest to: {}".format(path))
+        write_block_based_meta_file(data, path)
+        return name
+
+    def _pack_gen_write_tosca_manifest(
+            self, napdr, napd_path, etsi_mf_path,
+            name="TOSCA-Metadata/TOSCA.meta"):
+        wd = napdr._project_wd
+        # collect data for manifest block file
+        data = list()
+        b0 = None
+        b0 = {"TOSCA-Meta-Version": "1.0",
+              "CSAR-Version": "1.0",
+              "Created-By": napdr.maintainer,
+              "Entry-Manifest": etsi_mf_path,
+              "Entry-Definitions": "TODO"}
+        data.append(b0)
+        b1 = {"Name": napd_path,
+              "Content-Type": "application/vnd.5gtango.napd"}
+        data.append(b1)
+        # write file
+        path = os.path.join(wd, name)
+        LOG.debug("Writing TOSCA.meta to: {}".format(path))
+        write_block_based_meta_file(data, path)
+        return path
+
     def _do_unpackage(self, wd=None):
         """
         Unpack a 5GTANGO package.
@@ -763,6 +873,7 @@ class TangoPackager(EtsiPackager):
                 raise MissingMetadataException("No project descriptor found.")
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
+            napdr.package_type = self._pack_get_package_type(napdr)
             LOG.debug("Generated NAPDR: {}".format(napdr))
             # 3. create a temporary working directory
             napdr._project_wd = tempfile.mkdtemp()
@@ -774,6 +885,13 @@ class TangoPackager(EtsiPackager):
             # 5. copy project files to package tree
             self._pack_copy_files_to_package_directory_tree(
                 project_path, napdr)
+            # 6. generate/write NAPD
+            napd_path = self._pack_write_napd(napdr)
+            # 7. generate/write ETSI MF
+            etsi_mf_path = self._pack_gen_write_etsi_manifest(napdr)
+            # 8. TODO generate/write TOSCA
+            self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
+            # 9. TODO zip package
             # TODO continue here!
             LOG.warning("ATTENTION: Packaging not fully implemented yet."
                         + " No package generated.")
@@ -897,6 +1015,20 @@ def parse_block_based_meta_file(inputs):
         LOG.warning("No blocks found in: {}".format(inputs))
         blocks.append(dict())
     return blocks
+
+
+def write_block_based_meta_file(data, path):
+    """
+    Writes TOSCA/ETSI block-based meta files.
+    data = [block0_dict, ....blockN_dict]
+    """
+    with open(path, "w") as f:
+        for block in data:
+            if block is None:
+                continue
+            for k, v in block.items():
+                f.write("{}: {}\n".format(k, v))
+            f.write("\n")  # block separator
 
 
 def save_name(s):
