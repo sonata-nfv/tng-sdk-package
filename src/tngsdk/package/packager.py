@@ -740,12 +740,32 @@ class TangoPackager(EtsiPackager):
         LOG.debug("Writing NAPD to: {}".format(path))
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
+        return path
 
-    def _pack_gen_write_etsi_manifest(self, napdr):
+    def _pack_gen_write_etsi_manifest(self, napdr, name="etsi_manifest.mf"):
+        # TODO fix ETSI manifest naming
         wd = napdr._project_wd
-        print(wd)
+        # collect data for manifest block file
+        data = list()
+        b0 = None
+        if napdr.package_type == "application/vnd.5gtango.package.nsp":
+            b0 = {"ns_product_name": napdr.name,
+                  "ns_provider_id": napdr.vendor,
+                  "ns_package_version": napdr.version,
+                  "ns_release_date_time": napdr.release_date_time}
+        data.append(b0)
+        for pc in napdr.package_content:
+            bN = {"Source": pc.get("source"),
+                  "Algorithm": pc.get("algorithm"),
+                  "Hash": pc.get("hash")}
+            data.append(bN)
 
-    def _pack_gen_write_tosca_manifest(self, napdr):
+        path = os.path.join(wd, name)
+        LOG.debug("Writing ETSI manifest to: {}".format(path))
+        write_block_based_meta_file(data, path)
+        return path
+
+    def _pack_gen_write_tosca_manifest(self, napdr, napd_path, etsi_mf_path):
         wd = napdr._project_wd
         print(wd)
 
@@ -825,6 +845,7 @@ class TangoPackager(EtsiPackager):
                 raise MissingMetadataException("No project descriptor found.")
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
+            napdr.package_type = self._pack_get_package_type(napdr)
             LOG.debug("Generated NAPDR: {}".format(napdr))
             # 3. create a temporary working directory
             napdr._project_wd = tempfile.mkdtemp()
@@ -837,10 +858,11 @@ class TangoPackager(EtsiPackager):
             self._pack_copy_files_to_package_directory_tree(
                 project_path, napdr)
             # 6. generate/write NAPD
-            napdr.package_type = self._pack_get_package_type(napdr)
-            self._pack_write_napd(napdr)
-            # 7. TODO generate/write ETSI MF
+            napd_path = self._pack_write_napd(napdr)
+            # 7. generate/write ETSI MF
+            etsi_mf_path = self._pack_gen_write_etsi_manifest(napdr)
             # 8. TODO generate/write TOSCA
+            self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
             # 9. TODO zip package
             # TODO continue here!
             LOG.warning("ATTENTION: Packaging not fully implemented yet."
@@ -965,6 +987,20 @@ def parse_block_based_meta_file(inputs):
         LOG.warning("No blocks found in: {}".format(inputs))
         blocks.append(dict())
     return blocks
+
+
+def write_block_based_meta_file(data, path):
+    """
+    Writes TOSCA/ETSI block-based meta files.
+    data = [block0_dict, ....blockN_dict]
+    """
+    with open(path, "w") as f:
+        for block in data:
+            if block is None:
+                continue
+            for k, v in block.items():
+                f.write("{}: {}\n".format(k, v))
+            f.write("\n")  # block separator
 
 
 def save_name(s):
