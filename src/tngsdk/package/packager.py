@@ -889,12 +889,17 @@ class TangoPackager(EtsiPackager):
             napd_path = self._pack_write_napd(napdr)
             # 7. generate/write ETSI MF
             etsi_mf_path = self._pack_gen_write_etsi_manifest(napdr)
-            # 8. TODO generate/write TOSCA
+            # 8. generate/write TOSCA
             self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
-            # 9. TODO zip package
-            # TODO continue here!
-            LOG.warning("ATTENTION: Packaging not fully implemented yet."
-                        + " No package generated.")
+            # 9. zip package
+            path_dest = self.args.output
+            if path_dest is None:
+                path_dest = "{}.{}.{}.tgo".format(napdr.vendor,
+                                                  napdr.name,
+                                                  napdr.version)
+            creat_zip_file_from_directory(napdr._project_wd, path_dest)
+            LOG.info("Package created: '{}'"
+                     .format(path_dest))
             return napdr
         except BaseException as e:
             LOG.error(str(e))
@@ -939,6 +944,19 @@ def extract_zip_file_to_temp(path_zip, path_dest=None):
         wd = find_root_folder_of_pkg(path_dest)
         LOG.debug("Working root '{}'".format(wd))
         return wd
+
+
+def creat_zip_file_from_directory(path_src, path_dest):
+    LOG.debug("Zipping '{}' ...".format(path_dest))
+    t_start = time.time()
+    zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
+    for root, dirs, files in os.walk(path_src):
+        for f in files:
+            zf.write(os.path.join(root, f),
+                     os.path.relpath(
+                         os.path.join(root, f), path_src))
+    zf.close()
+    LOG.debug("Zipping done ({:.4f}s)".format(time.time()-t_start))
 
 
 def search_for_file(path="**/TOSCA.meta", recursive=True):

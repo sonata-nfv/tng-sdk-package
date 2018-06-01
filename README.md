@@ -52,6 +52,9 @@ docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:50
 ```sh
 # package a NS project
 tng-pkg -p misc/5gtango_ns_project_example1
+
+# optionally specify output file name
+tng-pkg -p misc/5gtango_ns_project_example1 -o my_package.tgo
 ```
 
 ### Unpackaging (using service mode with REST API)
