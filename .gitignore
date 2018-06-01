@@ -1,3 +1,4 @@
+*.tgo
 reports/
 .idea/
 # Byte-compiled / optimized / DLL files
