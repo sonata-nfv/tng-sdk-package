@@ -740,7 +740,7 @@ class TangoPackager(EtsiPackager):
         LOG.debug("Writing NAPD to: {}".format(path))
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
-        return path
+        return name
 
     def _pack_gen_write_etsi_manifest(self, napdr, name="etsi_manifest.mf"):
         # TODO fix ETSI manifest naming
@@ -753,21 +753,49 @@ class TangoPackager(EtsiPackager):
                   "ns_provider_id": napdr.vendor,
                   "ns_package_version": napdr.version,
                   "ns_release_date_time": napdr.release_date_time}
+        elif napdr.package_type == "application/vnd.5gtango.package.vnfp":
+            b0 = {"vnf_product_name": napdr.name,
+                  "vnf_provider_id": napdr.vendor,
+                  "vnf_package_version": napdr.version,
+                  "vnf_release_date_time": napdr.release_date_time}
+        elif napdr.package_type == "application/vnd.5gtango.package.tstp":
+            b0 = {"tst_product_name": napdr.name,
+                  "tst_provider_id": napdr.vendor,
+                  "tst_package_version": napdr.version,
+                  "tst_release_date_time": napdr.release_date_time}
         data.append(b0)
         for pc in napdr.package_content:
             bN = {"Source": pc.get("source"),
                   "Algorithm": pc.get("algorithm"),
                   "Hash": pc.get("hash")}
             data.append(bN)
-
+        # write file
         path = os.path.join(wd, name)
         LOG.debug("Writing ETSI manifest to: {}".format(path))
         write_block_based_meta_file(data, path)
-        return path
+        return name
 
-    def _pack_gen_write_tosca_manifest(self, napdr, napd_path, etsi_mf_path):
+    def _pack_gen_write_tosca_manifest(
+            self, napdr, napd_path, etsi_mf_path,
+            name="TOSCA-Metadata/TOSCA.meta"):
         wd = napdr._project_wd
-        print(wd)
+        # collect data for manifest block file
+        data = list()
+        b0 = None
+        b0 = {"TOSCA-Meta-Version": "1.0",
+              "CSAR-Version": "1.0",
+              "Created-By": napdr.maintainer,
+              "Entry-Manifest": etsi_mf_path,
+              "Entry-Definitions": "TODO"}
+        data.append(b0)
+        b1 = {"Name": napd_path,
+              "Content-Type": "application/vnd.5gtango.napd"}
+        data.append(b1)
+        # write file
+        path = os.path.join(wd, name)
+        LOG.debug("Writing TOSCA.meta to: {}".format(path))
+        write_block_based_meta_file(data, path)
+        return path
 
     def _do_unpackage(self, wd=None):
         """

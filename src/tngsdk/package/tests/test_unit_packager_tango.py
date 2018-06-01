@@ -487,3 +487,6 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.assertTrue(os.path.exists(
                 os.path.join(
                     wd, "etsi_manifest.mf")))
+        self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, "TOSCA-Metadata/TOSCA.meta")))
