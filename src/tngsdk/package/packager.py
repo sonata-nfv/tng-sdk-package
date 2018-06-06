@@ -235,7 +235,7 @@ class Packager(object):
         LOG.debug("Packager args: {}".format(self.args))
         if (self.storage_backend is None
                 and self.args.unpackage is not None):
-            LOG.warning("Disabled storage backend: skip_store=True?")
+            LOG.warning("Disabled storage backend: store_skip=True?")
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self.uuid)

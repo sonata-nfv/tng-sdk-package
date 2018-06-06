@@ -34,18 +34,39 @@ import argparse
 import os
 import sys
 from tngsdk.package.packager import PM
+from tngsdk.package.storage.tngcat import TangoCatalogBackend
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
 def dispatch(args):
-    # create packager object
-    p = PM.new_packager(args, pkg_format=args.pkg_format)
     # trigger pack/unpack
     if args.package:
+        # instantiate packager
+        p = PM.new_packager(args, pkg_format=args.pkg_format)
         p.package()
     elif args.unpackage:
+        # select and instantiate storage backend
+        # default in CLI mode: TangoProjectFilesystemBackend
+        sb = None
+        if (not args.store_skip
+                and not os.environ.get("STORE_SKIP", "False") == "True"):
+            sb_env = args.store_backend
+            if sb_env is None:
+                sb_env = os.environ.get(
+                    "STORE_BACKEND", "TangoProjectFilesystemBackend")
+            if sb_env == "TangoCatalogBackend":
+                sb = TangoCatalogBackend(args)
+            elif sb_env == "TangoProjectFilesystemBackend":
+                sb = TangoProjectFilesystemBackend(args)
+            else:
+                LOG.warning("Unknown storage backend: {}. Stop."
+                            .format(sb_env))
+                exit(1)
+        # instantiate packager
+        p = PM.new_packager(args, storage_backend=sb)
         p.unpackage()
     else:
         print("Missing arguments. Type tng-package -h.")
@@ -126,6 +147,22 @@ def parse_args(input_args=None):
         default=False,
         dest="offline",
         action="store_true")
+
+    parser.add_argument(
+        "--store-skip",
+        help="Skip store step.",
+        required=False,
+        default=False,
+        dest="store_skip",
+        action="store_true")
+
+    parser.add_argument(
+        "--store-backend",
+        help="Storage backend to be used."
+        + " Default: TangoProjectFilesystemBackend",
+        required=False,
+        default=None,
+        dest="store_backend")
 
     # service management
     parser.add_argument(

@@ -49,7 +49,8 @@ class TngSdkPackageCliTest(unittest.TestCase):
         tempdir = tempfile.mkdtemp()
         args = cli.parse_args(
             ["-u", "misc/5gtango-ns-package-example.tgo",
-             "-o", tempdir])
+             "-o", tempdir,
+             "--store-backend", "TangoProjectFilesystemBackend"])
         r = cli.dispatch(args)
         self.assertIsNone(r.error)
         shutil.rmtree(tempdir)
