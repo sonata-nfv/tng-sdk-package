@@ -35,25 +35,11 @@ import os
 import requests
 import yaml
 import json
+from tngsdk.package.storage import BaseStorageBackend, \
+    StorageBackendResponseException, StorageBackendUploadException
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
-
-
-class StorageBackendFileException(BaseException):
-    pass
-
-
-class StorageBackendUploadException(BaseException):
-    pass
-
-
-class StorageBackendResponseException(BaseException):
-    pass
-
-
-class BaseStorageBackend(object):
-    pass
 
 
 class TangoCatalogBackend(BaseStorageBackend):
@@ -67,28 +53,6 @@ class TangoCatalogBackend(BaseStorageBackend):
         )
         LOG.info("tng-cat-be: initialized TangoCatalogBackend({})"
                  .format(self.cat_url))
-
-    def _get_package_content_of_type(self, napdr, wd, mime_type):
-        """
-        Returns a list of paths to files referenced in napdr that
-        match the given mime type.
-        """
-        r = list()
-        for pc in napdr.package_content:
-            if mime_type in pc.get("content-type"):
-                r.append(os.path.join(wd, pc.get("source")))
-        return r
-
-    def _get_package_content_not_of_type(self, napdr, wd, mime_type):
-        """
-        Returns a list of paths to files referenced in napdr that
-        not match the given mime type.
-        """
-        r = list()
-        for pc in napdr.package_content:
-            if mime_type not in pc.get("content-type"):
-                r.append(os.path.join(wd, pc.get("source")))
-        return r
 
     def _post_yaml_data_to_catalog(self, endpoint, data):
         url = "{}{}".format(self.cat_url, endpoint)
@@ -170,22 +134,6 @@ class TangoCatalogBackend(BaseStorageBackend):
 
     def _post_test_descriptors(self, tstd):
         return self._post_yaml_file_to_catalog("/tests", tstd)
-
-    def _get_id_triple_from_descriptor_file(self, path):
-        """
-        gets vendor, name, version from YAML descriptor
-        returns dict
-        """
-        res = dict()
-        try:
-            with open(path, 'r') as f:
-                data = yaml.load(f)
-                res["vendor"] = data["vendor"]
-                res["name"] = data["name"]
-                res["version"] = data["version"]
-        except BaseException as e:
-            return None
-        return res
 
     def _parse_cat_yaml_response(self, response):
         try:

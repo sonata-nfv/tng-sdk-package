@@ -42,7 +42,7 @@ from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
-from tngsdk.package.storage import TangoCatalogBackend
+from tngsdk.package.storage.tngcat import TangoCatalogBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))

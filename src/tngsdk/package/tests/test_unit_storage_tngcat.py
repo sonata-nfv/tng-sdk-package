@@ -36,7 +36,7 @@ from mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
-from tngsdk.package.storage import TangoCatalogBackend
+from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.tests.fixtures import misc_file
 
 
