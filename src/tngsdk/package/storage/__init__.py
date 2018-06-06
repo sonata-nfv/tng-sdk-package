@@ -98,3 +98,4 @@ class BaseStorageBackend(object):
         Must be overwritten.
         """
         LOG.error("store(...) not implemented.")
+        return napdr

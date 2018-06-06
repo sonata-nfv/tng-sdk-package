@@ -29,3 +29,30 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
+
+import logging
+import os
+from tngsdk.package.storage import BaseStorageBackend
+
+
+LOG = logging.getLogger(os.path.basename(__file__))
+
+
+class TangoProjectFilesystemBackend(BaseStorageBackend):
+
+    def __init__(self, args):
+        self.args = args
+        # if no output folder is given use CWD
+        if self.args.output is None:
+            self.args.output = os.getcwd()
+        LOG.info(
+            "tng-prj-be: initialized TangoProjectFilesystemBackend({})"
+            .format(self.args.output))
+
+    def store(self, napdr, wd, pkg_file):
+        """
+        Turns the given unpacked package to a
+        5GTANGO SDK project in the local filesystem.
+        """
+        LOG.error("not implemented")
+        return napdr

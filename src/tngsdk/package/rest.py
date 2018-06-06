@@ -43,6 +43,7 @@ import requests
 from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -256,12 +257,18 @@ class Packages(Resource):
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.no_autoversion
-        # instantiate storage backend
-        # TODO make configurable, for now TangoCatalogBackend hard coded
+        # select and instantiate storage backend
         sb = None
         if (not args.skip_store
-                and not os.environ.get("SKIP_STORE", "False") == "True"):
-            sb = TangoCatalogBackend(args)
+                and not os.environ.get("STORE_SKIP", "False") == "True"):
+            sb_env = os.environ.get("STORE_BACKEND", "TangoCatalogBackend")
+            if sb_env == "TangoCatalogBackend":
+                sb = TangoCatalogBackend(args)
+            elif sb_env == "TangoProjectFilesystemBackend":
+                sb = TangoProjectFilesystemBackend(args)
+            else:
+                LOG.warning("Unknown storage backend: {}."
+                            .format(sb_env))
         # instantiate packager
         p = PM.new_packager(args, storage_backend=sb)
         try:
