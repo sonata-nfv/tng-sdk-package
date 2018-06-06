@@ -45,8 +45,11 @@ def dispatch(args):
     # trigger pack/unpack
     if args.package:
         p.package()
-    else:
+    elif args.unpackage:
         p.unpackage()
+    else:
+        print("Missing arguments. Type tng-package -h.")
+        exit(1)
     LOG.debug("Packager result: {}".format(p.result))
     # TODO display a nice result screen
     return p.result

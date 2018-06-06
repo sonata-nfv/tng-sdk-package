@@ -42,7 +42,7 @@ from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
-from tngsdk.package.storage import TangoCatalogBackend
+from tngsdk.package.storage.tngcat import TangoCatalogBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -186,6 +186,9 @@ def on_unpackaging_done(packager):
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
+    if c_url is None:
+        LOG.warning("'callback_url' is None. Skipping callback.")
+        return
     LOG.info("Callback: POST to '{}'".format(c_url))
     # build callback payload
     pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
@@ -208,6 +211,9 @@ def on_packaging_done(packager):
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
+    if c_url is None:
+        LOG.warning("'callback_url' is None. Skipping callback.")
+        return
     LOG.info("Callback: POST to '{}'".format(c_url))
     # perform callback request
     r_code = _do_callback_request(c_url, {})
@@ -328,5 +334,10 @@ class Ping(Resource):
     @api_v1.marshal_with(ping_get_return_model)
     @api_v1.response(200, "OK")
     def get(self):
+        ut = None
+        try:
+            ut = str(subprocess.check_output("uptime")).strip()
+        except BaseException as e:
+            LOG.warning(str(e))
         return {"ping": "pong",
-                "uptime": str(subprocess.check_output("uptime")).strip()}
+                "uptime": ut}
