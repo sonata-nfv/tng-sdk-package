@@ -334,5 +334,10 @@ class Ping(Resource):
     @api_v1.marshal_with(ping_get_return_model)
     @api_v1.response(200, "OK")
     def get(self):
+        ut = None
+        try:
+            ut = str(subprocess.check_output("uptime")).strip()
+        except BaseException as e:
+            LOG.warning(str(e))
         return {"ping": "pong",
-                "uptime": str(subprocess.check_output("uptime")).strip()}
+                "uptime": ut}
