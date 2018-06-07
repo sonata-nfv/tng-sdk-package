@@ -900,6 +900,8 @@ class TangoPackager(EtsiPackager):
             creat_zip_file_from_directory(napdr._project_wd, path_dest)
             LOG.info("Package created: '{}'"
                      .format(path_dest))
+            # annotate napdr
+            napdr.metadata["_storage_location"] = path_dest
             return napdr
         except BaseException as e:
             LOG.error(str(e))
