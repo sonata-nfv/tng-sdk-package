@@ -34,6 +34,7 @@
 import unittest
 import tempfile
 import os
+import shutil
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
@@ -84,3 +85,4 @@ class TngSdkPackageStorageTngPrjTest(unittest.TestCase):
             os.path.join(sl, "sources/Definitions/mynsd.yaml")))
         self.assertTrue(os.path.exists(
             os.path.join(sl, "sources/Definitions/myvnfd.yaml")))
+        shutil.rmtree(pd)

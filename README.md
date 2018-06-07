@@ -21,35 +21,11 @@ $ python setup.py install
 
 Runs the packager locally from the command line. Display detailed usage information with:
 
-* `Note:` Currently only package creation is supported in this mode.
-
 ```bash
 tng-package -h
 ```
 
-### Service mode
-
-Runs the packager as a micro service that exposes a REST API.
-
-* `Note:` Currently only unpackaging is supported in this mode.
-
-#### Bare metal
-```bash
-tng-package -s
-```
-
-#### Docker-based
-```bash
-# build Docker container
-pipeline/build/build.sh
-
-# run Docker container
-docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
-```
-
-## Examples
-
-### Packaging (using CLI mode)
+#### Packaging
 
 ```sh
 # package a NS project
@@ -59,7 +35,39 @@ tng-pkg -p misc/5gtango_ns_project_example1
 tng-pkg -p misc/5gtango_ns_project_example1 -o my_package.tgo
 ```
 
-### Unpackaging (using service mode with REST API)
+#### Unpackaging
+
+```sh
+# unpack a 5GTANGO package to a local 5GTANGO SDK project
+tng-pkg -u misc/5gtango-ns-package-example.tgo
+```
+
+### Service mode
+
+Runs the packager as a micro service that exposes a REST API.
+
+* `Note:` Currently only unpackaging is supported in this mode.
+
+#### Run
+##### Bare metal
+```bash
+tng-package -s
+```
+
+##### Docker-based
+```bash
+# build Docker container
+pipeline/build/build.sh
+
+# run Docker container
+docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
+```
+
+#### Packaging
+
+* `Note:` Currently only unpackaging is supported in this mode.
+
+#### Unpackaging
 
 ```sh
 # terminal 1 (tng-package service)
