@@ -40,6 +40,7 @@ from tngsdk.package.storage import BaseStorageBackend
 LOG = logging.getLogger(os.path.basename(__file__))
 # where to put the artifacts in the project structure
 BASE_ARTIFACT_DIR = "sources/"
+PROJECT_MANIFEST_NAME = "project.yml"
 
 
 class TangoProjectFilesystemBackend(BaseStorageBackend):
@@ -134,8 +135,10 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         self._create_project_tree(pd)
         # 4. copy artifacts from package to project
         self._copy_package_content_to_project(napdr, wd, pd)
-        # 5. write project.yaml
-        with open(os.path.join(pd, "project.yml"), "w") as f:
+        # 5. write project.yml
+        with open(os.path.join(pd, PROJECT_MANIFEST_NAME), "w") as f:
             yaml.dump(pm, f, default_flow_style=False)
         LOG.info("tng-prj-be: Created 5GTANGO SDK project: {}".format(pd))
+        # annotate napdr
+        napdr.metadata["_storage_location"] = pd
         return napdr
