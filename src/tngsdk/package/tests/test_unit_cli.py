@@ -34,6 +34,7 @@
 import unittest
 import tempfile
 import shutil
+import os
 import tngsdk.package.cli as cli
 
 
@@ -53,6 +54,8 @@ class TngSdkPackageCliTest(unittest.TestCase):
              "--store-backend", "TangoProjectFilesystemBackend"])
         r = cli.dispatch(args)
         self.assertIsNone(r.error)
+        self.assertTrue(os.path.exists(
+            os.path.join(tempdir, "5gtango-ns-package-example/project.yml")))
         shutil.rmtree(tempdir)
 
     def test_cli_unpackage_invalid(self):
@@ -65,5 +68,12 @@ class TngSdkPackageCliTest(unittest.TestCase):
         shutil.rmtree(tempdir)
 
     def test_cli_package(self):
-        # TODO implement
-        pass
+        tempdir = tempfile.mkdtemp()
+        pkg_path = os.path.join(tempdir, "package.tgo")
+        args = cli.parse_args(
+            ["-p", "misc/5gtango_ns_project_example1/",
+             "-o", pkg_path])
+        r = cli.dispatch(args)
+        self.assertIsNone(r.error)
+        self.assertTrue(os.path.exists(pkg_path))
+        shutil.rmtree(tempdir)

@@ -32,10 +32,15 @@
 
 import logging
 import os
+import shutil
+import yaml
 from tngsdk.package.storage import BaseStorageBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
+# where to put the artifacts in the project structure
+BASE_ARTIFACT_DIR = "sources/"
+PROJECT_MANIFEST_NAME = "project.yml"
 
 
 class TangoProjectFilesystemBackend(BaseStorageBackend):
@@ -46,13 +51,94 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         if self.args.output is None:
             self.args.output = os.getcwd()
         LOG.info(
-            "tng-prj-be: initialized TangoProjectFilesystemBackend({})"
+            "tng-prj-be: Initialized TangoProjectFilesystemBackend({})"
             .format(self.args.output))
+
+    def _makedirs(self, d):
+        if not os.path.exists(d):
+            os.makedirs(d)
+            LOG.debug("tng-prj-be: Created directories: {}".format(d))
+
+    def _create_project_tree(self, pd):
+        """
+        Creates the empty dir. tree of a 5GTANGO project
+        This might be changed if tng-sdk-project evolves.
+        """
+        self._makedirs(os.path.join(pd, "sources"))
+        self._makedirs(os.path.join(pd, "dependencies"))
+        self._makedirs(os.path.join(pd, "deployment"))
+        self._makedirs(os.path.join(pd, "sources"))
+
+    def _create_project_manifest(self, napdr):
+        """
+        Create a project manifest (project.yml) based
+        on the information from the NAPDR.
+        """
+        # base structure
+        pm = {
+            "descriptor_extension": "yml",
+            "version": "0.5",
+            "package": {
+                "vendor": napdr.vendor,
+                "name": napdr.name,
+                "version": napdr.version,
+                "maintainer": napdr.maintainer,
+                "description": napdr.description
+            },
+            "files": []
+        }
+        # add entries for artifacts
+        for pc in napdr.package_content:
+            tmp = pc.copy()
+            # remove checksum information
+            del tmp["algorithm"]
+            del tmp["hash"]
+            # re-write path (source -> path)
+            tmp["path"] = os.path.join(
+                BASE_ARTIFACT_DIR, tmp["source"])
+            del tmp["source"]
+            # re-write content type (content-type -> type)
+            tmp["type"] = tmp["content-type"]
+            del tmp["content-type"]
+            # add to pm
+            pm.get("files").append(tmp)
+        return pm
+
+    def _copy_package_content_to_project(self, napdr, wd, pd):
+        """
+        Copies all unpackaged artifacts to project directory.
+        """
+        for pc in napdr.package_content:
+            s = os.path.join(wd, pc.get("source"))
+            d = os.path.join(
+                os.path.join(pd, BASE_ARTIFACT_DIR), pc.get("source"))
+            # ensure dirs exist
+            self._makedirs(os.path.dirname(d))
+            LOG.debug("Copying {}\n\t to {}".format(s, d))
+            shutil.copyfile(s, d)
 
     def store(self, napdr, wd, pkg_file):
         """
         Turns the given unpacked package to a
         5GTANGO SDK project in the local filesystem.
         """
-        LOG.error("not implemented")
+        # 1. create project manifest from NAPDR
+        pm = self._create_project_manifest(napdr)
+        LOG.debug("tng-prj-be: Generated project manifest: {}"
+                  .format(pm))
+        # 2. create project directory
+        pd = os.path.join(
+            self.args.output,
+            os.path.splitext(os.path.basename(pkg_file))[0])
+        self._makedirs(pd)
+        # 3. create empty project tree
+        self._create_project_tree(pd)
+        # 4. copy artifacts from package to project
+        self._copy_package_content_to_project(napdr, wd, pd)
+        # 5. write project.yml
+        with open(os.path.join(pd, PROJECT_MANIFEST_NAME), "w") as f:
+            yaml.dump(pm, f, default_flow_style=False)
+        LOG.info("tng-prj-be: Created 5GTANGO SDK project: {}".format(pd))
+        # annotate napdr
+        napdr.metadata["_storage_location"] = pd
         return napdr
