@@ -68,3 +68,4 @@ def main():
         r = cli.dispatch(args)
         if r.error is not None:
             exit(1)  # exit with error code
+        exit(0)

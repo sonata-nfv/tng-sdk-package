@@ -47,6 +47,8 @@ def dispatch(args):
         # instantiate packager
         p = PM.new_packager(args, pkg_format=args.pkg_format)
         p.package()
+        LOG.debug("Packager result: {}".format(p.result))
+        display_result_package(args, p.result)
     elif args.unpackage:
         # select and instantiate storage backend
         # default in CLI mode: TangoProjectFilesystemBackend
@@ -68,12 +70,48 @@ def dispatch(args):
         # instantiate packager
         p = PM.new_packager(args, storage_backend=sb)
         p.unpackage()
+        LOG.debug("Packager result: {}".format(p.result))
+        display_result_unpackage(args, p.result)
     else:
         print("Missing arguments. Type tng-package -h.")
         exit(1)
-    LOG.debug("Packager result: {}".format(p.result))
-    # TODO display a nice result screen
     return p.result
+
+
+def display_result_unpackage(args, r):
+    print("=" * 79)
+    print("U N P A C K A G I N G   R E P O R T")
+    print("=" * 79)
+    print("Unpackaged:  {}".format(args.unpackage))
+    if r.error is None:
+        print("Project:     {}.{}.{}"
+              .format(r.vendor, r.name, r.version))
+        print("Artifacts:   {}".format(len(r.package_content)))
+        print("Output:      {}".format(r.metadata.get("_storage_location")))
+        print("Error:       {}".format(r.error))
+        print("Result:      Success.")
+    else:
+        print("Error:       {}".format(r.error))
+        print("Result:      Failed.")
+    print("=" * 79)
+
+
+def display_result_package(args, r):
+    print("=" * 79)
+    print("P A C K A G I N G   R E P O R T")
+    print("=" * 79)
+    print("Packaged:    {}".format(args.package))
+    if r.error is None:
+        print("Project:     {}.{}.{}"
+              .format(r.vendor, r.name, r.version))
+        print("Artifacts:   {}".format(len(r.package_content)))
+        print("Output:      {}".format(r.metadata.get("_storage_location")))
+        print("Error:       {}".format(r.error))
+        print("Result:      Success.")
+    else:
+        print("Error:       {}".format(r.error))
+        print("Result:      Failed.")
+    print("=" * 79)
 
 
 def parse_args(input_args=None):
