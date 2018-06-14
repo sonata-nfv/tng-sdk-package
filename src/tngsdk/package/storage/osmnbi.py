@@ -42,7 +42,17 @@ from tngsdk.package.storage import BaseStorageBackend  # , \
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
+OSM_MISSING = "Attention: 'osmclient' not installed on this system. \
+The OsmNbiBackend won't be able to upload artifacts to OSM. \
+Please install 'osmclient': https://osm.etsi.org/wikipub/index.php/OsmClient"
+
+
 class OsmNbiBackend(BaseStorageBackend):
+    """
+    Turns the given unpacked package into
+    multiple OSM packages and on-boards
+    them on the given OSM instance.
+    """
 
     def __init__(self, args):
         self.args = args
@@ -55,8 +65,23 @@ class OsmNbiBackend(BaseStorageBackend):
         # args overwrite other configurations (e.g. for unit tests)
         if "cat_url" in self.args:
             self.cat_url = self.args.cat_url
-        LOG.info("osn-nbi-be: initialized OsmNbiBackend({})"
+        self._test_osmclient_present()
+        LOG.info("osm-nbi-be: initialized OsmNbiBackend({})"
                  .format(self.cat_url))
+
+    def _test_osmclient_present(self):
+        """
+        Attention: This storage backend requires the 'osmclient'
+        library which is NOT part of the automated installation.
+        This method check if 'osmclient' is installed on the system.
+        """
+        try:
+            import osmclient
+            LOG.debug("Found OSM client: {}".format(osmclient))
+        except BaseException as e:
+            LOG.error(str(e))
+            LOG.error(OSM_MISSING)
+        return False
 
     def store(self, napdr, wd, pkg_file):
         """
