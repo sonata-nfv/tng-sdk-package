@@ -50,6 +50,18 @@ class MockResponse(object):
         return {"uuid": "2222"}
 
 
+class MockArgs(object):
+
+    def __init__(self):
+        self.cat_url = "http://tng-cat:4011/catalogues/api/v2/"
+
+    def __contains__(self, key):
+        return key in self.__dict__
+
+    def get(self, key):
+        return self.__dict__.get(key)
+
+
 def mock_requests_post(url, **kwargs):
     if ("http://127.0.0.1:4011/catalogues/api/v2/" not in url
             and "http://tng-cat:4011/catalogues/api/v2/" not in url):
@@ -81,12 +93,12 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         self.patcher.stop()
 
     def test_init(self):
-        tcb = TangoCatalogBackend({})
+        tcb = TangoCatalogBackend(MockArgs())
         self.assertIsNotNone(tcb)
 
     def test_store(self):
         # instantiate storage backend
-        tcb = TangoCatalogBackend({})
+        tcb = TangoCatalogBackend(MockArgs())
         self.assertIsNotNone(tcb)
         # unpack package and keep active working dir.
         napdr = self.p._do_unpackage()

@@ -44,6 +44,7 @@ from requests.exceptions import RequestException
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
+from tngsdk.package.storage.osmnbi import OsmNbiBackend
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -266,6 +267,8 @@ class Packages(Resource):
                 sb = TangoCatalogBackend(args)
             elif sb_env == "TangoProjectFilesystemBackend":
                 sb = TangoProjectFilesystemBackend(args)
+            elif sb_env == "OsmNbiBackend":
+                sb = OsmNbiBackend(args)
             else:
                 LOG.warning("Unknown storage backend: {}."
                             .format(sb_env))

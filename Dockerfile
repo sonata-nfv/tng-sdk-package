@@ -36,6 +36,7 @@ MAINTAINER 5GTANGO
 # Configurations
 #
 # Select the storage backend to be used
+# TangoCatalogBackend, OsmNbiBackend
 ENV STORE_BACKEND TangoCatalogBackend
 # Disables uploading of artifacts after unpackaging
 ENV STORE_SKIP False
