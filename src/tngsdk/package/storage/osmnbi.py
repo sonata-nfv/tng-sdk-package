@@ -32,6 +32,7 @@
 
 import logging
 import os
+import tarfile
 # import requests
 # import yaml
 # import json
@@ -60,7 +61,7 @@ class OsmNbiBackend(BaseStorageBackend):
         # cat_url = OSM NBI URL
         self.cat_url = os.environ.get(
             "CATALOGUE_URL",  # ENV CATALOGUE_URL
-            "http://127.0.0.1:4011/catalogues/api/v2"  # fallback
+            "http://127.0.0.1"  # fallback
         )
         # args overwrite other configurations (e.g. for unit tests)
         if "cat_url" in self.args:
@@ -90,4 +91,31 @@ class OsmNbiBackend(BaseStorageBackend):
         them on the given OSM instance.
         """
         LOG.error("osm-nbi-be: store() not yet implemented.")
+        # 1. collect and upload VNFDs
+        vnfds = self._get_package_content_of_type(
+            napdr, wd, "application/vnd.etsi.osm.vnfd")
+        for vnfd in vnfds:
+            LOG.debug("Found OSM VNFD: {}".format(vnfd))
+            # create a tar.gz file (minimal OSM package) for each descriptor
+            tar_path = "{}.tar.gz".format(vnfd.replace(".yml", ""))
+            with tarfile.open(tar_path, "w:gz") as tar:
+                tar.add(vnfd,
+                        arcname=os.path.basename(vnfd),
+                        recursive=False)
+            LOG.debug("Wrote: {}".format(tar_path))
+            # TODO post
+        # 2. collect and upload NSDs
+        nsds = self._get_package_content_of_type(
+            napdr, wd, "application/vnd.etsi.osm.nsd")
+        for nsd in nsds:
+            LOG.debug("Found OSM NSD: {}".format(nsd))
+            # create a tar.gz file (minimal OSM package) for each descriptor
+            tar_path = "{}.tar.gz".format(nsd.replace(".yml", ""))
+            with tarfile.open(tar_path, "w:gz") as tar:
+                tar.add(nsd,
+                        arcname=os.path.basename(nsd),
+                        recursive=False)
+            LOG.debug("Wrote: {}".format(tar_path))
+            # TODO post
+        # TODO update storage locations etc.
         return napdr
