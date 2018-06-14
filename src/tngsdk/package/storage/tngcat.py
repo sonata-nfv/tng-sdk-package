@@ -51,6 +51,9 @@ class TangoCatalogBackend(BaseStorageBackend):
             "CATALOGUE_URL",  # ENV CATALOGUE_URL
             "http://127.0.0.1:4011/catalogues/api/v2"  # fallback
         )
+        # args overwrite other configurations (e.g. for unit tests)
+        if "cat_url" in self.args:
+            self.cat_url = self.args.cat_url
         LOG.info("tng-cat-be: initialized TangoCatalogBackend({})"
                  .format(self.cat_url))
 

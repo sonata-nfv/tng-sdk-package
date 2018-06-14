@@ -1,4 +1,4 @@
-#  Copyright (c) 2015 SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+#  Copyright (c) 2018 SONATA-NFV, 5GTANGO, Paderborn University
 # ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Neither the name of the SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+# Neither the name of the SONATA-NFV, 5GTANGO, Paderborn University
 # nor the names of its contributors may be used to endorse or promote
 # products derived from this software without specific prior written
 # permission.
@@ -29,31 +29,40 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-FROM python:3.6-slim
-MAINTAINER 5GTANGO
 
-#
-# Configurations
-#
-# Select the storage backend to be used
-# TangoCatalogBackend, OsmNbiBackend
-ENV STORE_BACKEND TangoCatalogBackend
-# Disables uploading of artifacts after unpackaging
-ENV STORE_SKIP False
-# URL to the catalogue enpoint to which package contents are uploaded
-ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+import logging
+import os
+# import requests
+# import yaml
+# import json
+from tngsdk.package.storage import BaseStorageBackend  # , \
+#    StorageBackendResponseException, StorageBackendUploadException
 
 
-#
-# Installation
-#
-RUN pip install flake8
-ADD . /tng-sdk-package
-WORKDIR /tng-sdk-package
-RUN python setup.py install
+LOG = logging.getLogger(os.path.basename(__file__))
 
-#
-# Runtime
-#
-EXPOSE 5099
-CMD ["tng-package","-s", "-v"]
+
+class OsmNbiBackend(BaseStorageBackend):
+
+    def __init__(self, args):
+        self.args = args
+        # get environment config
+        # cat_url = OSM NBI URL
+        self.cat_url = os.environ.get(
+            "CATALOGUE_URL",  # ENV CATALOGUE_URL
+            "http://127.0.0.1:4011/catalogues/api/v2"  # fallback
+        )
+        # args overwrite other configurations (e.g. for unit tests)
+        if "cat_url" in self.args:
+            self.cat_url = self.args.cat_url
+        LOG.info("osn-nbi-be: initialized OsmNbiBackend({})"
+                 .format(self.cat_url))
+
+    def store(self, napdr, wd, pkg_file):
+        """
+        Turns the given unpacked package into
+        multiple OSM packages and on-boards
+        them on the given OSM instance.
+        """
+        LOG.error("osm-nbi-be: store() not yet implemented.")
+        return napdr
