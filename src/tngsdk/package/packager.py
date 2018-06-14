@@ -736,7 +736,8 @@ class TangoPackager(EtsiPackager):
             LOG.warning("Skipping NAPD validation (--offline)")
             return  # skip validation step
         if not validate_yaml_online(data):
-            raise NapdNotValidException
+            raise NapdNotValidException(
+                "NAPD validation failed. See logs for details.")
         LOG.debug("Writing NAPD to: {}".format(path))
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
