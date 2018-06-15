@@ -43,6 +43,9 @@ from tngsdk.package.storage import BaseStorageBackend  # , \
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
+DESCRIPTOR_EXTENSION = ".yml"
+
+
 OSM_MISSING = "Attention: 'osmclient' not installed on this system. \
 The OsmNbiBackend won't be able to upload artifacts to OSM. \
 Please install 'osmclient': https://osm.etsi.org/wikipub/index.php/OsmClient"
@@ -97,25 +100,29 @@ class OsmNbiBackend(BaseStorageBackend):
         for vnfd in vnfds:
             LOG.debug("Found OSM VNFD: {}".format(vnfd))
             # create a tar.gz file (minimal OSM package) for each descriptor
-            tar_path = "{}.tar.gz".format(vnfd.replace(".yml", ""))
+            tar_path = "{}.tar.gz".format(vnfd.replace(DESCRIPTOR_EXTENSION, ""))
             with tarfile.open(tar_path, "w:gz") as tar:
                 tar.add(vnfd,
-                        arcname=os.path.basename(vnfd),
+                        arcname="{}/{}".format(
+                            os.path.basename(vnfd).replace(DESCRIPTOR_EXTENSION, ""),
+                            os.path.basename(vnfd)),
                         recursive=False)
             LOG.debug("Wrote: {}".format(tar_path))
-            # TODO post
+            # TODO osm vnfd-create <file>
         # 2. collect and upload NSDs
         nsds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.etsi.osm.nsd")
         for nsd in nsds:
             LOG.debug("Found OSM NSD: {}".format(nsd))
             # create a tar.gz file (minimal OSM package) for each descriptor
-            tar_path = "{}.tar.gz".format(nsd.replace(".yml", ""))
+            tar_path = "{}.tar.gz".format(nsd.replace(DESCRIPTOR_EXTENSION, ""))
             with tarfile.open(tar_path, "w:gz") as tar:
                 tar.add(nsd,
-                        arcname=os.path.basename(nsd),
+                        arcname="{}/{}".format(
+                            os.path.basename(nsd).replace(DESCRIPTOR_EXTENSION, ""),
+                            os.path.basename(nsd)),
                         recursive=False)
             LOG.debug("Wrote: {}".format(tar_path))
-            # TODO post
+            # TODO osm nsd-create <file>
         # TODO update storage locations etc.
         return napdr
