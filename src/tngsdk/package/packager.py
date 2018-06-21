@@ -893,11 +893,14 @@ class TangoPackager(EtsiPackager):
             # 8. generate/write TOSCA
             self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
             # 9. zip package
+            auto_file_name = "{}.{}.{}.tgo".format(napdr.vendor,
+                                                   napdr.name,
+                                                   napdr.version)
             path_dest = self.args.output
             if path_dest is None:
-                path_dest = "{}.{}.{}.tgo".format(napdr.vendor,
-                                                  napdr.name,
-                                                  napdr.version)
+                path_dest = auto_file_name
+            if os.path.isdir(path_dest):
+                path_dest = os.path.join(path_dest, auto_file_name)
             creat_zip_file_from_directory(napdr._project_wd, path_dest)
             LOG.info("Package created: '{}'"
                      .format(path_dest))
