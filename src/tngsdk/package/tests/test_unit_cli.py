@@ -67,8 +67,9 @@ class TngSdkPackageCliTest(unittest.TestCase):
         self.assertIsNotNone(r.error)
         shutil.rmtree(tempdir)
 
-    def test_cli_package(self):
+    def test_cli_package_fixed_name(self):
         tempdir = tempfile.mkdtemp()
+        # specify a fixed name for the output
         pkg_path = os.path.join(tempdir, "package.tgo")
         args = cli.parse_args(
             ["-p", "misc/5gtango_ns_project_example1/",
@@ -77,3 +78,15 @@ class TngSdkPackageCliTest(unittest.TestCase):
         self.assertIsNone(r.error)
         self.assertTrue(os.path.exists(pkg_path))
         shutil.rmtree(tempdir)
+
+    def test_cli_package_auto_name(self):
+        # specify output dir. but not file name
+        pkg_path = tempfile.mkdtemp()
+        args = cli.parse_args(
+            ["-p", "misc/5gtango_ns_project_example1/",
+             "-o", pkg_path])
+        r = cli.dispatch(args)
+        self.assertIsNone(r.error)
+        self.assertTrue(
+            os.path.exists(pkg_path))
+        shutil.rmtree(pkg_path)
