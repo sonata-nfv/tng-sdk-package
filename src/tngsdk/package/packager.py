@@ -972,7 +972,15 @@ def search_for_file(path="**/TOSCA.meta", recursive=True):
     returned.
     param: path: src/**/*.c
     """
-    f_lst = list(glob.iglob(path, recursive=recursive))
+    f_lst = list()
+    try:
+        # Trick17: Depending on the Python version, the recursive
+        # argument might not be available. This provides a fallback.
+        # This reduces the robustness against malformed packages but ensures
+        # that the tool works well in older environments.
+        f_lst = list(glob.iglob(path, recursive=recursive))
+    except BaseException:
+        f_lst = list(glob.iglob(path))
     LOG.debug("Searching for '{}' found: {}".format(path, f_lst))
     if len(f_lst) > 0:
         return f_lst[0]
