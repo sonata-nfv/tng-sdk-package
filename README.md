@@ -11,7 +11,17 @@ The seed code of this component is based on the `son-cli` toolbox that was devel
 
 ## Installation
 
+### Automatically (using `pip`):
+
 ```bash
+$ pip install git+https://github.com/sonata-nfv/tng-sdk-package
+```
+
+### Manually:
+
+```bash
+$ git clone git@github.com:sonata-nfv/tng-sdk-package.git
+$ cd tng-sdk-package
 $ python setup.py install
 ```
 
