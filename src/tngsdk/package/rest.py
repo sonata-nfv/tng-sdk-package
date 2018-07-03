@@ -229,6 +229,7 @@ def _write_to_temp_file(package_data):
     path = os.path.join(path_dest, os.path.basename(package_data.filename))
     package_data.save(path)
     LOG.debug("Written uploaded package file to {}".format(path))
+    LOG.debug("-- File size {} byte".format(os.path.getsize(path)))
     return path
 
 
