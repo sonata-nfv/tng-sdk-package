@@ -34,13 +34,14 @@
 import unittest
 from mock import patch
 from requests.exceptions import RequestException
+from requests import get as real_get
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.tests.fixtures import misc_file
 
 
-class MockResponse(object):
+class MockResponsePost(object):
 
     def __init__(self):
         self.status_code = 201
@@ -48,6 +49,16 @@ class MockResponse(object):
 
     def json(self):
         return {"uuid": "2222"}
+
+
+class MockResponseGet(object):
+
+    def __init__(self):
+        self.status_code = 200
+        self.text = "[]"
+
+    def json(self):
+        return []
 
 
 class MockArgs(object):
@@ -65,10 +76,20 @@ class MockArgs(object):
 def mock_requests_post(url, **kwargs):
     if ("http://127.0.0.1:4011/catalogues/api/v2/" not in url
             and "http://tng-cat:4011/catalogues/api/v2/" not in url):
-        raise RequestException("bad url")
+        raise RequestException("bad url received in mock")
     assert(kwargs.get("data") is not None)
     assert(kwargs.get("headers") is not None)
-    mr = MockResponse()
+    mr = MockResponsePost()
+    return mr
+
+
+def mock_requests_get(url, **kwargs):
+    if ("http://127.0.0.1:4011/catalogues/api/v2/" not in url
+            and "http://tng-cat:4011/catalogues/api/v2/" not in url):
+        # do real request if no cat url
+        return real_get(url)
+    assert(kwargs.get("headers") is not None)
+    mr = MockResponseGet()
     return mr
 
 
@@ -77,6 +98,7 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
     def setUp(self):
         # configure mocks
         self.patcher = patch("requests.post", mock_requests_post)
+        self.patcher2 = patch("requests.get", mock_requests_get)
         # we need a packager to setup a environment to work on
         self.default_args = parse_args([])
         self.default_args.unpackage = misc_file(
@@ -88,9 +110,11 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         )
         # patch the requests lib to not do real requests
         self.patcher.start()
+        self.patcher2.start()
 
     def tearDown(self):
         self.patcher.stop()
+        self.patcher2.stop()
 
     def test_init(self):
         tcb = TangoCatalogBackend(MockArgs())
