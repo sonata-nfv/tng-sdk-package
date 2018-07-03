@@ -243,7 +243,7 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         file_catalog_uuids = dict()
         for vnfd in vnfds:
             vnfd_resp = self._post_vnf_descriptors(vnfd)
-            if vnfd_resp.status_code != 201:
+            if vnfd_resp.status_code != 201 and vnfd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload VNF descriptor: ({}) {}"
                     .format(vnfd_resp.status_code, vnfd_resp.text))
@@ -257,7 +257,7 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             napdr, wd, "application/vnd.5gtango.nsd")
         for nsd in nsds:
             nsd_resp = self._post_ns_descriptors(nsd)
-            if nsd_resp.status_code != 201:
+            if nsd_resp.status_code != 201 and nsd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload NS descriptor: ({}) {}"
                     .format(nsd_resp.status_code, nsd_resp.text))
@@ -271,7 +271,7 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             napdr, wd, "application/vnd.5gtango.tstd")
         for tstd in tstds:
             tstd_resp = self._post_test_descriptors(tstd)
-            if tstd_resp.status_code != 201:
+            if tstd_resp.status_code != 201 and tstd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload test descriptor: ({}) {}"
                     .format(tstd_resp.status_code, tstd_resp.text))
@@ -286,13 +286,8 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         gf_filenames_uuids = dict()
         for gf in generic_files:
             gf_clean = os.path.basename(gf)
-            # skip file upload if filename exists
-            # if self._generic_file_exists(gf_clean):
-            #    LOG.warning("File {} already exists in catalog \
-            # file upload skipped.".format(gf_clean))
-            #    continue
             gf_resp = self._post_generic_file_to_catalog("/files", gf)
-            if gf_resp.status_code != 201:
+            if gf_resp.status_code != 201 and gf_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload generic file ({}): ({}) {}"
                     .format(gf, gf_resp.status_code, gf_resp.text))
@@ -314,7 +309,7 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         self._annotate_napdr_with_id_triples(napdr, wd)
         self._annotate_napdr_with_pkg_file(napdr, pkg_file_uuid, pkg_file)
         pkg_resp = self._post_package_descriptor(napdr)
-        if pkg_resp.status_code != 201:
+        if pkg_resp.status_code != 201 and pkg_resp.status_code != 200:
             raise StorageBackendUploadException(
                 "tng-cat-be: could not upload package descriptor: ({}) {}"
                 .format(pkg_resp.status_code, pkg_resp.text))
