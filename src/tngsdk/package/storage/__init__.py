@@ -46,6 +46,10 @@ class StorageBackendUploadException(BaseException):
     pass
 
 
+class StorageBackendDuplicatedException(BaseException):
+    pass
+
+
 class StorageBackendResponseException(BaseException):
     pass
 

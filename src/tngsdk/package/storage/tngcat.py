@@ -36,8 +36,8 @@ import requests
 import yaml
 import json
 from tngsdk.package.storage import BaseStorageBackend, \
-    StorageBackendResponseException, StorageBackendUploadException
-from tngsdk.package.packager import NapdRecord
+    StorageBackendResponseException, StorageBackendUploadException, \
+    StorageBackendDuplicatedException
 
 
 LOG = logging.getLogger(os.path.basename(__file__))
@@ -227,16 +227,12 @@ class TangoCatalogBackend(BaseStorageBackend):
             existing_napd = self._get_artifact(
                 napdr.vendor, napdr.name, napdr.version)
             pkg_uuid = existing_napd[0].get("uuid")
-            warn_msg = "package {}.{}.{} already exists \
+            msg = "tng-cat-be: Could not upload package {}.{}.{}. \
+Package already exists (409) \
 in the catalog with UUID {}. Skipped uploads \
 of additional artifacts belonging to \
 this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
-            LOG.warning("tng-cat-be: {}".format(warn_msg))
-            # return the entry found in the catalog:
-            napdr = NapdRecord(**existing_napd[0])
-            self._annotate_napdr_with_cat_storage_locations(napdr, pkg_uuid)
-            napdr.warning = warn_msg
-            return napdr
+            raise StorageBackendDuplicatedException(msg)
         # 1. collect and upload VNFDs
         vnfds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.5gtango.vnfd")
