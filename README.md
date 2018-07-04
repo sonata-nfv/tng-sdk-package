@@ -9,15 +9,23 @@ This repository contains the `tng-sdk-package` component that is part of the Eur
 
 The seed code of this component is based on the `son-cli` toolbox that was developed as part of the European H2020 project [SONATA](http://sonata-nfv.eu).
 
+## Documentation
+
+Besides this README file, more documentation is available in the [wiki](https://github.com/sonata-nfv/tng-sdk-package/wiki) belonging to this repository.
+
 ## Installation
 
-### Automatically (using `pip`):
+This component is implemented in Python3. Its requirements are specified [here](https://github.com/sonata-nfv/tng-sdk-package/blob/master/requirements.txt).
+
+### Automated:
+
+The automated installation requires `pip` (more specifically `pip3`).
 
 ```bash
 $ pip install git+https://github.com/sonata-nfv/tng-sdk-package
 ```
 
-### Manually:
+### Manual:
 
 ```bash
 $ git clone git@github.com:sonata-nfv/tng-sdk-package.git
@@ -27,22 +35,21 @@ $ python setup.py install
 
 ## Usage
 
+The packager can either be used as command line tool (CLI mode) or deployed as a micro service which offers a REST API.
+
 ### CLI mode
 
-Runs the packager locally from the command line. Display detailed usage information with:
+Runs the packager locally from the command line. Details about all possible parameters can be shown using:
 
 ```bash
-tng-package -h
+tng-pkg -h
 ```
 
 #### Packaging
 
 ```sh
-# package a NS project
+# package a 5GTANGO SDK project
 tng-pkg -p misc/5gtango_ns_project_example1
-
-# optionally specify output file name
-tng-pkg -p misc/5gtango_ns_project_example1 -o my_package.tgo
 ```
 
 #### Unpackaging
@@ -56,12 +63,12 @@ tng-pkg -u misc/5gtango-ns-package-example.tgo
 
 Runs the packager as a micro service that exposes a REST API.
 
-* `Note:` Currently only unpackaging is supported in this mode.
+* `Note:` Currently *only unpackaging* is supported in this mode.
 
-#### Run
+#### Run `tng-sdk-package` as a service:
 ##### Bare metal
 ```bash
-tng-package -s
+tng-pkg -s
 ```
 
 ##### Docker-based
@@ -73,44 +80,22 @@ pipeline/build/build.sh
 docker run --rm -d -p 5099:5099 --name tng-sdk-package registry.sonata-nfv.eu:5000/tng-sdk-package
 ```
 
-#### Packaging
-
-* `Note:` Currently only unpackaging is supported in this mode.
 
 #### Unpackaging
 
 ```sh
-# terminal 1 (tng-package service)
-tng-package -s
+# terminal 1 (run tng-sdk-package service)
+tng-pkg -s
 
-# terminal 2 (callback dummy)
-python misc/callback_mock.py
-
-# terminal 3 (client)
-# unpack valid package
+# terminal 2 (client that sends a package to be unpacked using REST API)
 curl -X POST -v -H "Content-Type: multipart/form-data" \
-    -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
     -F package="@misc/5gtango-ns-package-example.tgo" \
-    http://127.0.0.1:5099/api/v1/packages
-
-# unpack invalid package
-curl -X POST -v -H "Content-Type: multipart/form-data" \
-    -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
-    -F package="@misc/5gtango-ns-package-example-malformed.tgo" \
-    http://127.0.0.1:5099/api/v1/packages
-    
-# unpack package w. bad checksum
-curl -X POST -v -H "Content-Type: multipart/form-data" \
-    -F callback_url="http://127.0.0.1:8000/api/v1/packages/on-change" \
-    -F package="@misc/5gtango-ns-package-example-bad-checksum.tgo" \
     http://127.0.0.1:5099/api/v1/packages
     
 # get status of all known packageing processes
 curl -X GET http://127.0.0.1:5099/api/v1/packages/status
-
-# get status of specific packageing process
-curl -X GET http://127.0.0.1:5099/api/v1/packages/status/<packager_process_uuid>
 ```
+
 
 ## Development
 
@@ -132,6 +117,12 @@ You can also run the test manually on your local machine. To do so, you need to 
 
 ```bash
 $ pytest -v
+```
+
+### Execute full CI pipeline locally:
+
+```bash
+$ ./pipeline_local.sh
 ```
 
 ## License

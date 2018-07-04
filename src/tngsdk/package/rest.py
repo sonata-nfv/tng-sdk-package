@@ -255,13 +255,16 @@ class Packages(Resource):
         args.offline = False
         args.no_checksums = False
         args.no_autoversion = False
+        args.store_skip = False
         if app.cliargs is not None:
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.no_autoversion
+            args.store_skip = app.cliargs.store_skip
         # select and instantiate storage backend
         sb = None
-        if (not args.skip_store
+        if (not args.store_skip  # from CLI
+                and not args.skip_store  # from request
                 and not os.environ.get("STORE_SKIP", "False") == "True"):
             sb_env = os.environ.get("STORE_BACKEND", "TangoCatalogBackend")
             if sb_env == "TangoCatalogBackend":
