@@ -105,6 +105,7 @@ class NapdRecord(object):
     """
     def __init__(self, **kwargs):
         self.error = None
+        self.warning = None
         self.descriptor_schema = ("https://raw.githubusercontent.com"
                                   + "/sonata-nfv/tng-schema/master/"
                                   + "package-specification/napd-schema.yml")
@@ -138,6 +139,8 @@ class NapdRecord(object):
         # root
         if "error" in d:
             del d["error"]
+        if "warning" in d:
+            del d["warning"]
         if "metadata" in d:
             del d["metadata"]
         if "_project_wd" in d:
