@@ -1,0 +1,44 @@
+---
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/service-descriptor/nsd-schema.yml"
+
+author: Thomas Soenen
+connection_points:
+- id: mgmt
+  interface: ipv4
+  type: management
+description: a10networks-nginx
+name: a10networks-nginx
+network_functions:
+- vnf_id: vth
+  vnf_name: vth-vnf
+  vnf_vendor: a10networks
+  vnf_version: '0.11'
+- vnf_id: nginx
+  vnf_name: nginx
+  vnf_vendor: nginx
+  vnf_version: '0.11'
+service_specific_managers:
+- description: placement SSM.
+  id: sonssmplugtesttask-config-monitor1
+  image: tsoenen/scalingtest
+  options:
+  - key: type
+    value: monitor
+  - key: type
+    value: configure
+  - key: type
+    value: task
+vendor: eu.5gtango
+version: '0.1'
+virtual_links:
+- connection_points_reference:
+  - vth:cpmgmt
+  - nginx:cpmgmt
+  - mgmt
+  connectivity_type: E-LAN
+  id: vlmgmt
+- connection_points_reference:
+  - nginx:cpinout
+  - vth:cpeast
+  connectivity_type: E-Line
+  id: vleast

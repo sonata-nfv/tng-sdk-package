@@ -1,0 +1,69 @@
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/function-descriptor/vnfd-schema.yml"
+author: Felipe Vicens :@ ATOS
+connection_points:
+- id: cpmgmt
+  interface: ipv4
+  type: management
+- id: cpwest
+  interface: ipv4
+  type: external
+- id: cpeast
+  interface: ipv4
+  type: external
+description: a10networks vthunder
+function_specific_managers:
+- description: FSM to do a first FSM test
+  id: sonfsmplugtesta10networkscss1
+  image: tsoenen/a10plugtest
+  options:
+  - key: type
+    value: configure
+  - key: type
+    value: start
+name: vth-vnf
+vendor: a10networks
+version: '0.11'
+virtual_deployment_units:
+- connection_points:
+  - id: mgmt
+    interface: ipv4
+    type: management
+  - id: west
+    interface: ipv4
+    type: external
+  - id: east
+    interface: ipv4
+    type: internal
+  id: vdu01
+  resource_requirements:
+    cpu:
+      vcpus: 2
+    memory:
+      size: 4
+      size_unit: GB
+    storage:
+      size: 12
+      size_unit: GB
+  user_data: "a10_blob: |\n   ip dns primary 8.8.4.4\n   hostname vth5\n   glm use-mgmt-port\n\
+    \   glm allocate-bandwidth 200\n   glm token vTh\n   glm enable-requests\n   glm\
+    \ send license-request\n   inter ether 1\n      ip addr dhcp\n      enable\n \
+    \  inter ether 2\n      ip addr dhcp\n      enable\n"
+  vm_image: http://www.google.com
+  vm_image_format: qcow2
+  vm_image_md5: df942aa9105a055ee95a814da644972f
+virtual_links:
+- connection_points_reference:
+  - vdu01:mgmt
+  - cpmgmt
+  connectivity_type: E-LAN
+  id: mgmt
+- connection_points_reference:
+  - vdu01:west
+  - cpwest
+  connectivity_type: E-Line
+  id: west
+- connection_points_reference:
+  - vdu01:east
+  - cpeast
+  connectivity_type: E-Line
+  id: east
