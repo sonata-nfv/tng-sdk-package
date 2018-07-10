@@ -28,7 +28,7 @@ service_specific_managers:
     value: configure
   - key: type
     value: task
-vendor: eu.5gtango
+vendor: eu-5gtango
 version: '0.1'
 virtual_links:
 - connection_points_reference:
