@@ -1,0 +1,21 @@
+descriptor_extension: yml
+files:
+- path: sources/vnfd/vnfd-a10.yml
+  tags:
+  - eu.5gtango
+  type: application/vnd.5gtango.vnfd
+- path: sources/vnfd/vnfd-nginx.yml
+  tags:
+  - eu.5gtango
+  type: application/vnd.5gtango.nsd
+- path: sources/nsd/nsd.yml
+  tags:
+  - eu.5gtango
+  type: application/vnd.5gtango.nsd
+package:
+  description: a10-nginx network service
+  maintainer: Thomas Soenen, imec
+  name: a10networks-nginx
+  vendor: eu.5gtango
+  version: '0.1'
+version: '0.5'

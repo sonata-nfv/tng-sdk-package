@@ -1,0 +1,57 @@
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/function-descriptor/vnfd-schema.yml"
+author: Thomas Soenen @imec
+connection_points:
+- id: cpmgmt
+  interface: ipv4
+  type: management
+- id: cpinout
+  interface: ipv4
+  type: internal
+description: nginx VNF
+monitoring_rules:
+- condition: vdu01:active_connections > 10
+  description: Trigger events if HTTP load is more than 30.
+  duration: 30
+  duration_unit: s
+  name: mon:rule:active_connections
+  notification:
+  - name: notification01
+    type: rabbitmq_message
+name: nginx
+vendor: nginx
+version: '0.11'
+virtual_deployment_units:
+- connection_points:
+  - id: mgmt
+    interface: ipv4
+    type: management
+  - id: cpinout
+    interface: ipv4
+    type: internal
+  id: vdu01
+  monitoring_parameters:
+  - name: active_connections
+    unit: bps
+  resource_requirements:
+    cpu:
+      vcpus: 1
+    memory:
+      size: 1
+      size_unit: GB
+    storage:
+      size: 20
+      size_unit: GB
+  vm_image: http://www.google.com
+  vm_image_format: qcow2
+  vm_image_md5: 394c39262f33d0ebf51f7442bbc5d6a3
+virtual_links:
+- connection_points_reference:
+  - vdu01:mgmt
+  - cpmgmt
+  connectivity_type: E-LAN
+  id: mgmt
+- connection_points_reference:
+  - vdu01:cpinout
+  - cpinout
+  connectivity_type: E-Line
+  id: inout
