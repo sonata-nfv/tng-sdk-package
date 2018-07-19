@@ -7,7 +7,7 @@ files:
 - path: sources/vnfd/vnfd-nginx.yml
   tags:
   - eu.5gtango
-  type: application/vnd.5gtango.nsd
+  type: application/vnd.5gtango.vnfd
 - path: sources/nsd/nsd.yml
   tags:
   - eu.5gtango
