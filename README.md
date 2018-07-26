@@ -5,13 +5,16 @@
 # tng-sdk-package
 
 
-This repository contains the `tng-sdk-package` component that is part of the European H2020 project [5GTANGO](http://www.5gtango.eu) NFV SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST).
+This repository contains the `tng-sdk-package` component that is part of the European H2020 project [5GTANGO](http://www.5gtango.eu) NFV SDK. This component is responsible to create and unpack [5GTANGO service, VNF, and test packages](https://github.com/sonata-nfv/tng-schema/wiki/PkgSpec_LATEST). The seed code of this component is based on the `son-cli` toolbox that was developed as part of the European H2020 project [SONATA](http://sonata-nfv.eu).
 
-The seed code of this component is based on the `son-cli` toolbox that was developed as part of the European H2020 project [SONATA](http://sonata-nfv.eu).
+To simplify the creation and extraction of 5GTANGO packages, we develop this packager tool as part of 5GTANGO's SDK. This tool is a complete rewrite of the SONATA packaging tool. The reason for this rewrite is that the 5GANGO packaging tool does not only support and simplifies the package creation but can also be used to unpack packages. For this, the packaging tool can be deployed as a micro service and used, e.g., by the service platform to unpack packages. The clear benefit of this design, compared to the SONATA design in which we used different tools for this, is that only one common codebase needs to be maintained that deals with packages. Thus, code changes, which may be a result of a change in the package format, need only be done in a single component of 5GTANGO. The architecture and design of the packaging tools is described in [5GTANGO D4.1 First open-source release of the SDK toolset](https://5gtango.eu/project-outcomes/deliverables/42-d4-1-first-open-source-release-of-the-sdk-toolset.html) in more detail.
 
 ## Documentation
 
-Besides this README file, more documentation is available in the [wiki](https://github.com/sonata-nfv/tng-sdk-package/wiki) belonging to this repository.
+Besides this README file, more documentation is available in the [wiki](https://github.com/sonata-nfv/tng-sdk-package/wiki) belonging to this repository. Additional information are available in the project's deliverables:
+
+* [5GTANGO D2.2 Architecture Design](https://5gtango.eu/project-outcomes/deliverables/2-uncategorised/31-d2-2-architecture-design.html)
+* [5GTANGO D4.1 First open-source release of the SDK toolset](https://5gtango.eu/project-outcomes/deliverables/42-d4-1-first-open-source-release-of-the-sdk-toolset.html)
 
 ## Installation and Dependencies
 
