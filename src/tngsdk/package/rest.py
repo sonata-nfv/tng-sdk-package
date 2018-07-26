@@ -151,10 +151,7 @@ packages_parser.add_argument("format",
 
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
-    "ping": fields.String(
-        description="pong",
-        required=True),
-    "uptime": fields.String(
+    "alive_since": fields.String(
         description="system uptime",
         required=True),
 })
@@ -342,7 +339,7 @@ class Project(Resource):
         return "not implemented", 501
 
 
-@api_v1.route("/ping")
+@api_v1.route("/pings")
 class Ping(Resource):
 
     @api_v1.marshal_with(ping_get_return_model)
@@ -353,5 +350,4 @@ class Ping(Resource):
             ut = str(subprocess.check_output("uptime")).strip()
         except BaseException as e:
             LOG.warning(str(e))
-        return {"ping": "pong",
-                "uptime": ut}
+        return {"alive_since": ut}
