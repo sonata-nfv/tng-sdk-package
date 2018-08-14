@@ -30,51 +30,50 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
-import coloredlogs
+
+import unittest
+import tempfile
+import shutil
 import os
-
-from tngsdk.package import rest, cli
-
-
-LOG = logging.getLogger(os.path.basename(__file__))
+import tngsdk.package as tngpkg
 
 
-def logging_setup():
-    os.environ["COLOREDLOGS_LOG_FORMAT"] \
-        = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
-
-
-def run(args=None):
+class TngSdkPackagePythonApiTest(unittest.TestCase):
     """
-    Entry point.
-    Can get a list of args that are then
-    used as input for the CLI arg parser.
+    Test case to check that the tool can be
+    used from external Python code, e.g.,
+    by directly calling its run method.
     """
-    args = cli.parse_args(args)
-    # TODO better log configuration (e.g. file-based logging)
-    if args.verbose:
-        coloredlogs.install(level="DEBUG")
-    else:
-        coloredlogs.install(level="INFO")
-    if args.dump_swagger:
-        rest.dump_swagger(args)
-        LOG.info("Dumped Swagger API model to {}".format(
-            args.dump_swagger_path))
-        exit(0)
-    # TODO validate if args combination makes any sense
-    if args.service:
-        # start tng-sdk-package in service mode (REST API)
-        rest.serve_forever(args)
-    else:
-        # run package in CLI mode
-        return cli.dispatch(args)
-    return None
 
+    def setUp(self):
+        pass
 
-def main():
-    logging_setup()
-    r = run()
-    if r is not None and r.error is not None:
-        exit(1)  # exit with error code
-    exit(0)
+    def tearDown(self):
+        pass
+
+    def test_pyapi_unpackage(self):
+        tempdir = tempfile.mkdtemp()
+        # set arguments using a list
+        args = [
+            "--unpackage", "misc/5gtango-ns-package-example.tgo",
+            "--output", tempdir,
+            "--store-backend", "TangoProjectFilesystemBackend"
+        ]
+        r = tngpkg.run(args)
+        self.assertIsNone(r.error)
+        self.assertTrue(os.path.exists(
+            os.path.join(tempdir, "5gtango-ns-package-example/project.yml")))
+        shutil.rmtree(tempdir)
+
+    def test_pyapi_package_auto_name(self):
+        # specify output dir. but not file name.
+        pkg_path = tempfile.mkdtemp()
+        args = [
+            "--package", "misc/5gtango_ns_project_example1/",
+            "--output", pkg_path
+        ]
+        r = tngpkg.run(args)
+        self.assertIsNone(r.error)
+        self.assertTrue(
+            os.path.exists(pkg_path))
+        shutil.rmtree(pkg_path)
