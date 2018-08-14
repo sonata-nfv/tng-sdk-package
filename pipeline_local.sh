@@ -3,6 +3,9 @@ set -e
 # Helper script that runs parts of the CI/CD pipeline locally.
 # Can be used to check code before pushing.
 
+# check style early
+flake8 --exclude .eggs 
+
 # always dump swagger api spec
 tng-package --dump-swagger
 
