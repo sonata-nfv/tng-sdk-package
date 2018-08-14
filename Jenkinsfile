@@ -60,14 +60,15 @@ pipeline {
                 }
             }
         }
-        */
         stage('Container publication') {
             steps {
                 echo 'Stage: Container publication...'
                 sh "pipeline/publish/publish.sh"
             }
         }
+        */
     }
+
     post {
          success {
                  emailext(from: "jenkins@sonata-nfv.eu", 
