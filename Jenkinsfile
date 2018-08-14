@@ -32,6 +32,7 @@ pipeline {
                 echo 'Stage: Smoke test... (not implemented)'
             }
         }
+        /*
         stage('Promoting/deploying containers to pre-int env') {
             steps {
                 echo 'Stage: Promoting containers to pre-integration env'
@@ -59,6 +60,7 @@ pipeline {
                 }
             }
         }
+        */
         stage('Container publication') {
             steps {
                 echo 'Stage: Container publication...'
