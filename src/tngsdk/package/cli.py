@@ -82,6 +82,8 @@ def dispatch(args):
 
 
 def display_result_unpackage(args, r):
+    if args.quiet:
+        return
     print("=" * 79)
     print("U N P A C K A G I N G   R E P O R T")
     print("=" * 79)
@@ -100,6 +102,8 @@ def display_result_unpackage(args, r):
 
 
 def display_result_package(args, r):
+    if args.quiet:
+        return
     print("=" * 79)
     print("P A C K A G I N G   R E P O R T")
     print("=" * 79)
@@ -161,6 +165,15 @@ def parse_args(input_args=None):
         required=False,
         default=False,
         dest="verbose",
+        action="store_true")
+
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        help="Do not print packaging info.",
+        required=False,
+        default=False,
+        dest="quiet",
         action="store_true")
 
     # packaging/unpackaging process
