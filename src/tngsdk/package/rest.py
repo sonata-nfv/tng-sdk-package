@@ -278,7 +278,7 @@ class Packages(Resource):
         try:
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:
-            LOG.exception("Unpackaging error:")
+            LOG.exception("Unpackaging error: {}".format(e))
         return {"package_process_uuid": str(p.uuid),
                 "status": p.status,
                 "error_msg": p.error_msg}
