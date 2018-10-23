@@ -45,7 +45,7 @@ ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
 
 
 #
-# Installation
+# Installation (packager)
 #
 RUN pip install flake8
 ADD . /tng-sdk-package
@@ -53,7 +53,25 @@ WORKDIR /tng-sdk-package
 RUN python setup.py install
 
 #
+# Installation (validator)
+# We include tng-sdk-validation by default in this container so that the
+# packager can always make use of it to validate packages/projects.
+# Installation is done by fetching the HEAD of MASTER from GitHub.
+#
+# use wget/zip to install
+RUN apt-get update && apt-get install -y wget unzip
+WORKDIR /
+RUN wget https://github.com/sonata-nfv/tng-sdk-validation/archive/master.zip
+RUN unzip master.zip
+WORKDIR /tng-sdk-validation-master
+RUN python setup.py install
+# alternative: use git/pip to install
+#RUN apt-get update && apt-get install -y git
+#RUN pip install git+https://github.com/sonata-nfv/tng-sdk-validation.git
+
+#
 # Runtime
 #
+WORKDIR /tng-sdk-package
 EXPOSE 5099
 CMD ["tng-package","-s", "-v"]
