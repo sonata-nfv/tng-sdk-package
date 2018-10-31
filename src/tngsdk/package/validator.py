@@ -39,6 +39,18 @@ from jsonschema import validate
 LOG = logging.getLogger(os.path.basename(__file__))
 
 
+def validate_project_with_external_validator(project_path):
+    """
+    Try to use an external validator (typically tng-sdk-validation)
+    to validate the given service project.
+    """
+    # called in do_package
+    # not yet called for unpacker (needs to be called from
+    #    filestore backend right now, (maybe unpack to tmp project
+    #    for validation))
+    return True, None  # return bool, error_msg
+
+
 def validate_yaml_online(data, schema_uri=None):
     """
     Validates the given data structure against an online

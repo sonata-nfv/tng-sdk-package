@@ -46,6 +46,7 @@ import pprint
 import pyrfc3339
 import hashlib
 from tngsdk.package.validator import validate_yaml_online
+from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.helper import dictionary_deep_merge
 
 
@@ -867,6 +868,12 @@ class TangoPackager(EtsiPackager):
             return NapdRecord()
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
+        # 0. validate project with external validator
+        vok, verror = validate_project_with_external_validator(project_path)
+        if not vok:
+            LOG.error(str(verror))
+            self.error_msg = str(verror)
+            return NapdRecord(error=str(verror))
         try:
             # 1. find and load project descriptor
             if project_path is None or project_path == "None":
