@@ -84,6 +84,8 @@ def dispatch(args):
 def display_result_unpackage(args, r):
     if args.quiet:
         return
+    if os.environ.get("LOGJSON", args.logjson):
+        return
     print("=" * 79)
     print("U N P A C K A G I N G   R E P O R T")
     print("=" * 79)
@@ -103,6 +105,8 @@ def display_result_unpackage(args, r):
 
 def display_result_package(args, r):
     if args.quiet:
+        return
+    if os.environ.get("LOGJSON", args.logjson):
         return
     print("=" * 79)
     print("P A C K A G I N G   R E P O R T")

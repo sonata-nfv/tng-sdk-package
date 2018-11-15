@@ -35,6 +35,8 @@
 #
 import logging
 import coloredlogs
+import datetime
+import json
 
 
 class TangoLogger(object):
@@ -43,6 +45,9 @@ class TangoLogger(object):
     def configure(cls, log_level=logging.INFO, log_json=False):
         """
         Configure all active TangoLoggers
+        Two modes:
+        - log_json = False: Normal colored logging in text format
+        - log_json = True: 5GTANGO logging (flat JSON objects and metadata)
         """
         # reconfigure all our TangoLoggers
         for n, l in logging.Logger.manager.loggerDict.items():
@@ -71,7 +76,6 @@ class TangoLogger(object):
         coloredlogs.install(logger=logger, level=log_level)
         th = TangoJsonLogHandler()
         logger.addHandler(th)
-        # logger.propagate = False  # do not send to root logger
         return logger
 
 
@@ -80,7 +84,53 @@ class TangoJsonLogHandler(logging.StreamHandler):
     Custom log handler to create JSON-based log messages
     as required by the 5GTANGO SP.
     https://github.com/sonata-nfv/tng-gtk-utils
+
+    It uses the normal Python logging interface and utilizes
+    the "extra" parameter of the logging methods to add additional
+    fields (optionally) for the JSON output.
+
+    Example:
+    LOG = TangoLogger.getLogger("logger_name")
+    TangoLogger.configure(log_level=logging.INFO, log_json=True)
+    LOG.info("the message", extra={"start_stop": "START", "status": "400"})
+
+    Turns into:
+    {
+        "type": "I",
+        "timestamp": "2018-10-18 15:49:08 UTC",
+        "start_stop": "",
+        "component": "logger_name",
+        "operation": "op1",
+        "message": "the message",
+        "status": "400",
+        "time_elapsed": ""
+    }
     """
 
+    def _to_tango_dict(self, record):
+        """
+        Creates a dict in 5GTANGO format from the given record.
+        Sets defaults of not given.
+        """
+        d = {
+            # TANGO default fields
+            "type": record.levelname[0],
+            "timestamp": "{} UTC".format(datetime.datetime.utcnow()),
+            "start_stop": record.__dict__.get("start_stop", ""),
+            "component": record.name,
+            "operation": record.__dict__.get("operation", record.funcName),
+            "message": str(record.msg),
+            "status": record.__dict__.get("status", ""),
+            "time_elapsed": record.__dict__.get("time_elapsed", ""),
+            # some additional fields (because we can ;-))
+            "lineno": record.lineno,
+            "threadName": record.threadName,
+            "processName": record.processName,
+        }
+        return d
+
     def emit(self, record):
-        print("TANGO LOGGER {}".format(record.msg))
+        """
+        We go the simple way here: Just print the JSON :-)
+        """
+        print(json.dumps(self._to_tango_dict(record)))
