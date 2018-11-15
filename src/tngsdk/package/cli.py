@@ -175,6 +175,14 @@ def parse_args(input_args=None):
         dest="log_level")
 
     parser.add_argument(
+        "--logjson",
+        help="Use 5GTANGO JSON-based logging. Default: False",
+        required=False,
+        default=False,
+        dest="logjson",
+        action="store_true")
+
+    parser.add_argument(
         "-q",
         "--quiet",
         help="Do not print packaging info.",

@@ -40,7 +40,7 @@ import coloredlogs
 class TangoLogger(object):
 
     @classmethod
-    def configure(cls, log_level=logging.INFO):
+    def configure(cls, log_level=logging.INFO, log_json=False):
         """
         Configure all active TangoLoggers
         """
@@ -51,7 +51,15 @@ class TangoLogger(object):
                 # apply log_level
                 l.setLevel(log_level)
                 for h in l.handlers:
+                    # show messages in all handlers
                     h.setLevel(log_level)
+                    # disable handler depending on log_json
+                    if isinstance(h, TangoJsonLogHandler):
+                        if not log_json:
+                            h.setLevel(999)  # disable (hide all)
+                    else:
+                        if log_json:
+                            h.setLevel(999)  # disable (hide all)
 
     @classmethod
     def getLogger(cls, name, log_level=logging.INFO):
@@ -60,14 +68,14 @@ class TangoLogger(object):
         """
         # all TangoLoggers are prefixed for global setup
         logger = logging.getLogger("tango.{}".format(name))
-        th = TangoLogHandler()
-        logger.addHandler(th)
-        logger.propagate = False  # do not send to root logger
         coloredlogs.install(logger=logger, level=log_level)
+        th = TangoJsonLogHandler()
+        logger.addHandler(th)
+        # logger.propagate = False  # do not send to root logger
         return logger
 
 
-class TangoLogHandler(logging.StreamHandler):
+class TangoJsonLogHandler(logging.StreamHandler):
     """
     Custom log handler to create JSON-based log messages
     as required by the 5GTANGO SP.
@@ -75,5 +83,4 @@ class TangoLogHandler(logging.StreamHandler):
     """
 
     def emit(self, record):
-        record.msg = "TANGO LOGGER {}".format(record.msg)
-        super().emit(record)
+        print("TANGO LOGGER {}".format(record.msg))

@@ -63,8 +63,10 @@ def setup_logging(args):
     # if "-v" is there set to debug
     if args.verbose:
         log_level = logging.DEBUG
+    # select logging mode
+    log_json = os.environ.get("LOGJSON", args.logjson)
     # configure all TangoLoggers
-    TangoLogger.configure(log_level=log_level)
+    TangoLogger.configure(log_level=log_level, log_json=log_json)
 
 
 def run(args=None):
