@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Neither the name of the SONATA-NFV, 5GTANGO, UBIWHERE, Paderborn University
+# Neither the name of the SONATA-NFV, 5GTANGO, Paderborn University
 # nor the names of its contributors may be used to endorse or promote
 # products derived from this software without specific prior written
 # permission.
@@ -92,18 +92,22 @@ class TangoJsonLogHandler(logging.StreamHandler):
     Example:
     LOG = TangoLogger.getLogger("logger_name")
     TangoLogger.configure(log_level=logging.INFO, log_json=True)
-    LOG.info("the message", extra={"start_stop": "START", "status": "400"})
+    LOG.warning("this is a test message",
+                extra={"start_stop": "START", "status": "201"})
 
-    Turns into:
+    Turns into (printed to a single line):
     {
-        "type": "I",
-        "timestamp": "2018-10-18 15:49:08 UTC",
-        "start_stop": "START",
-        "component": "logger_name",
-        "operation": "caling_function",
-        "message": "the message",
-        "status": "400",
-        "time_elapsed": ""
+        "type":"W",
+        "time_elapsed":"",
+        "operation":"setup_logging",
+        "status":"201",
+        "message":"this is a test message",
+        "component":"tango.tngsdk.package",
+        "processName":"MainProcess",
+        "threadName":"MainThread",
+        "start_stop":"START",
+        "lineno":73,
+        "timestamp":"2018-11-15 19:25:49.348161 UTC"
     }
     """
 
