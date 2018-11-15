@@ -31,18 +31,40 @@
 # partner consortium (www.5gtango.eu).
 
 import logging
-import coloredlogs
 import os
-
 from tngsdk.package import rest, cli
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
-def logging_setup():
-    os.environ["COLOREDLOGS_LOG_FORMAT"] \
-        = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+def setup_logging(args):
+    """
+    Configure logging.
+    """
+    log_level = logging.INFO
+    # get loglevel from environment or --loglevel
+    log_level_str = os.environ.get("LOGLEVEL", "INFO")
+    if args.log_level:  # overwrite if present
+        log_level_str = args.log_level
+    # parse
+    log_level_str = str(log_level_str).lower()
+    if log_level_str == "debug":
+        log_level = logging.DEBUG
+    elif log_level_str == "info":
+        log_level = logging.INFO
+    elif log_level_str == "warning":
+        log_level = logging.WARNING
+    elif log_level_str == "error":
+        log_level = logging.ERROR
+    else:
+        print("Loglevel '{}' unknown.".format(log_level_str))
+    # if "-v" is there set to debug
+    if args.verbose:
+        log_level = logging.DEBUG
+    # configure all TangoLoggers
+    TangoLogger.configure(log_level=log_level)
 
 
 def run(args=None):
@@ -52,11 +74,8 @@ def run(args=None):
     used as input for the CLI arg parser.
     """
     args = cli.parse_args(args)
-    # TODO better log configuration (e.g. file-based logging)
-    if args.verbose:
-        coloredlogs.install(level="DEBUG")
-    else:
-        coloredlogs.install(level="INFO")
+    setup_logging(args)
+
     if args.dump_swagger:
         rest.dump_swagger(args)
         LOG.info("Dumped Swagger API model to {}".format(
@@ -73,7 +92,6 @@ def run(args=None):
 
 
 def main():
-    logging_setup()
     r = run()
     if r is not None and r.error is not None:
         exit(1)  # exit with error code

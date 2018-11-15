@@ -30,7 +30,6 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 FROM python:3.6-slim
-MAINTAINER 5GTANGO
 
 #
 # Configurations
@@ -56,4 +55,4 @@ RUN python setup.py install
 # Runtime
 #
 EXPOSE 5099
-CMD ["tng-package","-s", "-v"]
+CMD ["tng-package","-s"]

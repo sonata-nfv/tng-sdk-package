@@ -29,7 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import os
 import shutil
 import threading
@@ -47,9 +46,10 @@ import pyrfc3339
 import hashlib
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.helper import dictionary_deep_merge
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 DESCRIPTOR_MIME_TYPES = ["application/vnd.5gtango.nsd",
@@ -673,6 +673,7 @@ class TangoPackager(EtsiPackager):
         except AssertionError as e:
             m = "Package metadata vailidation failed. Package unusable. Abort."
             LOG.exception(m)
+            del e
             raise MetadataValidationException(m)
         return False
 
@@ -1113,6 +1114,7 @@ def validate_file_checksum(path, algorithm, hash_str):
     except BaseException as e:
         msg = "Coudn't compute file hash {}".format(path)
         LOG.exeception(msg)
+        del e
         raise ChecksumException(msg)
     # compare checksums
     if h_file != hash_str:

@@ -167,6 +167,7 @@ class TangoCatalogBackend(BaseStorageBackend):
             return yaml.load(response.text)
         except BaseException as e:
             LOG.exception()
+            del e
             raise StorageBackendResponseException(
                 "tng-cat-be: could not parse tng-cat resp.: '{}'"
                 .format(response.text))

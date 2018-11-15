@@ -29,7 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import argparse
 import os
 import sys
@@ -37,9 +36,10 @@ from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 def dispatch(args):
@@ -166,6 +166,13 @@ def parse_args(input_args=None):
         default=False,
         dest="verbose",
         action="store_true")
+
+    parser.add_argument(
+        "--loglevel",
+        help="Directly specify loglevel. Default: INFO",
+        required=False,
+        default=None,
+        dest="log_level")
 
     parser.add_argument(
         "-q",

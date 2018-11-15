@@ -94,6 +94,7 @@ class BaseStorageBackend(object):
                 res["name"] = data["name"]
                 res["version"] = data["version"]
         except BaseException as e:
+            del e
             return None
         return res
 
