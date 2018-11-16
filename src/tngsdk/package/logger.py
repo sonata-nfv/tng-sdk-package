@@ -29,10 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-
-#
-# This module implements custom loggers for use in the 5GTANGO SP.
-#
 import logging
 import coloredlogs
 import datetime
@@ -40,58 +36,18 @@ import json
 
 
 class TangoLogger(object):
+    """
+    5GTAGNO logger that allows to switch to "JSON mode" to creat
+    JSON log messages in the 5GTANGO format.
+    see:
 
-    @classmethod
-    def configure(cls, log_level=logging.INFO, log_json=False):
-        """
-        Configure all active TangoLoggers
-        Two modes:
+    Two modes:
         - log_json = False: Normal colored logging in text format
         - log_json = True: 5GTANGO logging (flat JSON objects and metadata)
-        """
-        # reconfigure all our TangoLoggers
-        for n, l in logging.Logger.manager.loggerDict.items():
-            # use prefix to only get TangoLoggers
-            if n.startswith("tango.") and isinstance(l, logging.Logger):
-                # apply log_level
-                l.setLevel(log_level)
-                for h in l.handlers:
-                    # show messages in all handlers
-                    h.setLevel(log_level)
-                    # disable handler depending on log_json
-                    if isinstance(h, TangoJsonLogHandler):
-                        if not log_json:
-                            h.setLevel(999)  # disable (hide all)
-                    else:
-                        if log_json:
-                            h.setLevel(999)  # disable (hide all)
-
-    @classmethod
-    def getLogger(cls, name, log_level=logging.INFO):
-        """
-        Create a TangoLogger logger.
-        """
-        # all TangoLoggers are prefixed for global setup
-        logger = logging.getLogger("tango.{}".format(name))
-        coloredlogs.install(logger=logger, level=log_level)
-        th = TangoJsonLogHandler()
-        logger.addHandler(th)
-        return logger
-
-
-class TangoJsonLogHandler(logging.StreamHandler):
-    """
-    Custom log handler to create JSON-based log messages
-    as required by the 5GTANGO SP.
-    https://github.com/sonata-nfv/tng-gtk-utils
-
-    It uses the normal Python logging interface and utilizes
-    the "extra" parameter of the logging methods to add additional
-    fields (optionally) for the JSON output.
 
     Example:
-    LOG = TangoLogger.getLogger("logger_name")
-    TangoLogger.configure(log_level=logging.INFO, log_json=True)
+    LOG = TangoLogger.getLogger("logger_name",
+                                log_level=logging.INFO, log_json=True)
     LOG.warning("this is a test message",
                 extra={"start_stop": "START", "status": "201"})
 
@@ -109,6 +65,67 @@ class TangoJsonLogHandler(logging.StreamHandler):
         "lineno":73,
         "timestamp":"2018-11-15 19:25:49.348161 UTC"
     }
+    """
+
+    @staticmethod
+    def reconfigure_all_tango_loggers(
+            log_level=logging.INFO, log_json=False):
+        """
+        Configure all active TangoLoggers (identified by 'tango.' prfix).
+        Two modes:
+        - log_json = False: Normal colored logging in text format
+        - log_json = True: 5GTANGO logging (flat JSON objects and metadata)
+        """
+        # reconfigure all our TangoLoggers
+        for n, l in logging.Logger.manager.loggerDict.items():
+            # use prefix to only get TangoLoggers
+            if n.startswith("tango.") and isinstance(l, logging.Logger):
+                TangoLogger._reconfigure_logger(l, log_level, log_json)
+
+    @staticmethod
+    def _reconfigure_logger(logger, log_level, log_json):
+        """
+        Reconfigure specific logger (switch between
+        normal logging and 5GTANGO JsonLogging).
+        Switch is done by muting the unwanted handlers.
+        """
+        # apply log_level
+        logger.setLevel(log_level)
+        for h in logger.handlers:
+            # show messages in all handlers
+            h.setLevel(log_level)
+            # disable handler depending on log_json
+            if isinstance(h, TangoJsonLogHandler):
+                if not log_json:
+                    h.setLevel(999)  # disable (hide all)
+            else:
+                if log_json:
+                    h.setLevel(999)  # disable (hide all)
+
+    @staticmethod
+    def getLogger(name, log_level=logging.INFO, log_json=False):
+        """
+        Create a TangoLogger logger.
+        """
+        # all TangoLoggers are prefixed for global setup
+        logger = logging.getLogger("tango.{}".format(name))
+        coloredlogs.install(logger=logger)
+        th = TangoJsonLogHandler()
+        logger.addHandler(th)
+        # onfigure logger
+        TangoLogger._reconfigure_logger(logger, log_level, log_json)
+        return logger
+
+
+class TangoJsonLogHandler(logging.StreamHandler):
+    """
+    Custom log handler to create JSON-based log messages
+    as required by the 5GTANGO SP.
+    https://github.com/sonata-nfv/tng-gtk-utils
+
+    It uses the normal Python logging interface and utilizes
+    the "extra" parameter of the logging methods to add additional
+    fields (optionally) for the JSON output.
     """
 
     def _to_tango_dict(self, record):

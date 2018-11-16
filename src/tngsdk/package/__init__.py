@@ -66,7 +66,8 @@ def setup_logging(args):
     # select logging mode
     log_json = os.environ.get("LOGJSON", args.logjson)
     # configure all TangoLoggers
-    TangoLogger.configure(log_level=log_level, log_json=log_json)
+    TangoLogger.reconfigure_all_tango_loggers(
+        log_level=log_level, log_json=log_json)
 
 
 def run(args=None):
