@@ -30,14 +30,16 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
 import os
 import shutil
 import yaml
 from tngsdk.package.storage import BaseStorageBackend
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
+
+
 # where to put the artifacts in the project structure
 BASE_ARTIFACT_DIR = "sources/"
 PROJECT_MANIFEST_NAME = "project.yml"

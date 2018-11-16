@@ -41,6 +41,10 @@ ENV STORE_BACKEND TangoCatalogBackend
 ENV STORE_SKIP False
 # URL to the catalogue enpoint to which package contents are uploaded
 ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+#
+# Logging
+ENV LOGLEVEL INFO
+ENV LOGJSON True
 
 
 #

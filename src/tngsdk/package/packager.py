@@ -234,7 +234,8 @@ class Packager(object):
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
-        LOG.info("Packager created: {}".format(self))
+        LOG.info("Packager created: {}".format(self),
+                 extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
         if (self.storage_backend is None
                 and self.args.unpackage is not None):
@@ -276,7 +277,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_unpackage()
         LOG.info("Packager done ({:.4f}s): {} error: {}".format(
-            time.time()-t_start, self, self.result.error))
+            time.time()-t_start, self, self.result.error),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         if self.result.error is None:
             self.status = PkgStatus.SUCCESS
         else:
@@ -290,7 +293,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_package()
         LOG.info("Packager done ({:.4f}s): {}".format(
-            time.time()-t_start, self))
+            time.time()-t_start, self),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         self.status = PkgStatus.SUCCESS
         # callback
         if callback_func:

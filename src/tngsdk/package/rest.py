@@ -29,8 +29,8 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import os
+import time
 import json
 import tempfile
 import subprocess
@@ -45,9 +45,10 @@ from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 app = Flask(__name__)
@@ -240,8 +241,10 @@ class Packages(Resource):
     @api_v1.response(200, "Successfully started unpackaging.")
     @api_v1.response(400, "Bad package: Could not unpackage given package.")
     def post(self, **kwargs):
+        t_start = time.time()
         args = packages_parser.parse_args()
-        LOG.info("POST to /packages w. args: {}".format(args))
+        LOG.info("POST to /packages w. args: {}".format(args),
+                 extra={"start_stop": "START"})
         if args.package.filename is None:
             LOG.warning("Posted package filename was None.")
             args.package.filename = "temp_pkg.tgo"
@@ -279,6 +282,9 @@ class Packages(Resource):
             p.unpackage(callback_func=on_unpackaging_done)
         except BaseException as e:
             LOG.exception("Unpackaging error: {}".format(e))
+        LOG.info("POST to /packages done",
+                 extra={"start_stop": "STOP", "status": p.status,
+                        "time_elapsed": str(time.time()-t_start)})
         return {"package_process_uuid": str(p.uuid),
                 "status": p.status,
                 "error_msg": p.error_msg}
@@ -291,10 +297,17 @@ class PackagesStatusItem(Resource):
     @api_v1.response(200, "OK")
     @api_v1.response(404, "Package process not found.")
     def get(self, package_process_uuid):
+        LOG.info("GET to /packages/status/ w. args: {}".format(
+                    package_process_uuid),
+                 extra={"start_stop": "START"})
         p = PM.get_packager(package_process_uuid)
         if p is None:
+            LOG.warning("GET to /packages/status/ done",
+                        extra={"start_stop": "STOP", "status": 404})
             return {"error_msg": "Package process not found: {}".format(
                 package_process_uuid)}, 404
+        LOG.info("GET to /packages/status/ done",
+                 extra={"start_stop": "STOP", "status": p.status})
         return {"package_process_uuid": str(p.uuid),
                 "status": p.status,
                 "error_msg": p.error_msg}
@@ -306,11 +319,15 @@ class PackagesStatusList(Resource):
     @api_v1.marshal_with(packages_status_list_get_return_model)
     @api_v1.response(200, "OK")
     def get(self):
+        LOG.info("GET to /packages/status",
+                 extra={"start_stop": "START"})
         r = list()
         for p in PM.packager_list:
             r.append({"package_process_uuid": str(p.uuid),
                       "status": p.status,
                       "error_msg": p.error_msg})
+        LOG.info("GET to /packages/status done",
+                 extra={"start_stop": "STOP", "status": "200"})
         return {"package_processes": r}
 
 
@@ -323,7 +340,8 @@ class Project(Resource):
     def post(self):
         LOG.warning("endpoint not implemented yet")
         args = projects_parser.parse_args()
-        LOG.info("POST to /projects w. args: {}".format(args))
+        LOG.info("POST to /projects w. args: {}".format(args),
+                 extra={"start_stop": "START"})
         args.package = None  # fill with path to uploaded project
         args.unpackage = None
         # pass CLI args to REST args
@@ -336,6 +354,8 @@ class Project(Resource):
             args.no_autoversion = app.cliargs.no_autoversion
         p = PM.new_packager(args)
         p.package(callback_func=on_packaging_done)
+        LOG.info("POST to /projects done.",
+                 extra={"start_stop": "START", "status": 501})
         return "not implemented", 501
 
 

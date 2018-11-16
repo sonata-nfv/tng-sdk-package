@@ -30,7 +30,6 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
 import os
 import requests
 import yaml
@@ -38,9 +37,10 @@ import json
 from tngsdk.package.storage import BaseStorageBackend, \
     StorageBackendResponseException, StorageBackendUploadException, \
     StorageBackendDuplicatedException
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 class TangoCatalogBackend(BaseStorageBackend):

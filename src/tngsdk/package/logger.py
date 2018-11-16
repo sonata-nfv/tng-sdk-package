@@ -107,12 +107,13 @@ class TangoLogger(object):
         """
         Create a TangoLogger logger.
         """
+        print("GET LOGGER: {}".format(name))
         # all TangoLoggers are prefixed for global setup
         logger = logging.getLogger("tango.{}".format(name))
         coloredlogs.install(logger=logger)
         th = TangoJsonLogHandler()
         logger.addHandler(th)
-        # onfigure logger
+        # configure logger
         TangoLogger._reconfigure_logger(logger, log_level, log_json)
         return logger
 
