@@ -30,7 +30,6 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 FROM python:3.6-slim
-MAINTAINER 5GTANGO
 
 #
 # Configurations
@@ -42,6 +41,10 @@ ENV STORE_BACKEND TangoCatalogBackend
 ENV STORE_SKIP False
 # URL to the catalogue enpoint to which package contents are uploaded
 ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
+#
+# Logging
+ENV LOGLEVEL INFO
+ENV LOGJSON True
 
 
 #
@@ -56,4 +59,4 @@ RUN python setup.py install
 # Runtime
 #
 EXPOSE 5099
-CMD ["tng-package","-s", "-v"]
+CMD ["tng-package","-s"]

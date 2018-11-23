@@ -29,11 +29,11 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
-import os
 import copy
+from tngsdk.package.logger import TangoLogger
 
-LOG = logging.getLogger(os.path.basename(__file__))
+
+LOG = TangoLogger.getLogger(__name__)
 
 
 def dictionary_deep_merge(d1, d2, skip=None):
