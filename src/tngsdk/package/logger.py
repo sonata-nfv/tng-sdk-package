@@ -34,6 +34,7 @@ import coloredlogs
 import datetime
 import json
 import sys
+import traceback
 
 
 class TangoLogger(object):
@@ -134,6 +135,15 @@ class TangoJsonLogHandler(logging.StreamHandler):
         Creates a dict in 5GTANGO format from the given record.
         Sets defaults of not given.
         """
+        # fetch exception info and stack trace if available
+        exc_info_str = None
+        if record.exc_info:
+            exc_info_str = str(
+                traceback.format_exception(
+                    record.exc_info[0],
+                    record.exc_info[1],
+                    record.exc_info[2]))
+
         d = {
             # TANGO default fields
             "type": record.levelname[0],
@@ -148,6 +158,8 @@ class TangoJsonLogHandler(logging.StreamHandler):
             "lineno": record.lineno,
             "threadName": record.threadName,
             "processName": record.processName,
+            "stack_info": str(record.stack_info),
+            "exc_info": exc_info_str
         }
         return d
 
