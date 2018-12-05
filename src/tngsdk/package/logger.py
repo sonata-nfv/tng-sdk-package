@@ -158,7 +158,7 @@ class TangoJsonLogHandler(logging.StreamHandler):
             "lineno": record.lineno,
             "threadName": record.threadName,
             "processName": record.processName,
-            "stack_info": record.stack_info,
+            "stack_info": str(record.stack_info),
             "exc_info": exc_info_str
         }
         return d
