@@ -30,12 +30,12 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
 import os
 import yaml
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 class StorageBackendFileException(BaseException):
@@ -94,6 +94,7 @@ class BaseStorageBackend(object):
                 res["name"] = data["name"]
                 res["version"] = data["version"]
         except BaseException as e:
+            del e
             return None
         return res
 

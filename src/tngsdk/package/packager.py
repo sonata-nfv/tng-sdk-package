@@ -29,7 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import os
 import shutil
 import threading
@@ -48,9 +47,10 @@ import hashlib
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.helper import dictionary_deep_merge
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 DESCRIPTOR_MIME_TYPES = ["application/vnd.5gtango.nsd",
@@ -235,7 +235,8 @@ class Packager(object):
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
-        LOG.info("Packager created: {}".format(self))
+        LOG.info("Packager created: {}".format(self),
+                 extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
         if (self.storage_backend is None
                 and self.args.unpackage is not None):
@@ -277,7 +278,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_unpackage()
         LOG.info("Packager done ({:.4f}s): {} error: {}".format(
-            time.time()-t_start, self, self.result.error))
+            time.time()-t_start, self, self.result.error),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         if self.result.error is None:
             self.status = PkgStatus.SUCCESS
         else:
@@ -291,7 +294,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_package()
         LOG.info("Packager done ({:.4f}s): {}".format(
-            time.time()-t_start, self))
+            time.time()-t_start, self),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         self.status = PkgStatus.SUCCESS
         # callback
         if callback_func:
@@ -674,6 +679,7 @@ class TangoPackager(EtsiPackager):
         except AssertionError as e:
             m = "Package metadata vailidation failed. Package unusable. Abort."
             LOG.exception(m)
+            del e
             raise MetadataValidationException(m)
         return False
 
@@ -1120,6 +1126,7 @@ def validate_file_checksum(path, algorithm, hash_str):
     except BaseException as e:
         msg = "Coudn't compute file hash {}".format(path)
         LOG.exeception(msg)
+        del e
         raise ChecksumException(msg)
     # compare checksums
     if h_file != hash_str:
