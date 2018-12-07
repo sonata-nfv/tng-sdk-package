@@ -42,6 +42,9 @@ from tngsdk.package.logger import TangoLogger
 LOG = TangoLogger.getLogger(__name__)
 
 
+DEFAULT_WORKSPACE_DIR = os.path.join(os.path.expanduser("~"), ".tng-schema")
+
+
 def dispatch(args):
     # trigger pack/unpack
     if args.package:
@@ -219,6 +222,16 @@ def parse_args(input_args=None):
         default=False,
         dest="skip_validation",
         action="store_true")
+
+    # only needed for validator
+    parser.add_argument(
+        "-w", "--workspace",
+        help="Location of existing workspace (see: tng-project -h) "
+             "If not specified will assume '{}'"
+              .format(DEFAULT_WORKSPACE_DIR),
+        default=DEFAULT_WORKSPACE_DIR,
+        dest="workspace",
+        required=False)
 
     parser.add_argument(
         "--offline",
