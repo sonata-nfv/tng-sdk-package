@@ -68,7 +68,7 @@ RUN wget https://github.com/sonata-nfv/tng-sdk-validation/archive/master.zip
 RUN unzip master.zip
 WORKDIR /tng-sdk-validation-master
 RUN python setup.py install
-# alternative: use git/pip to install
+# alternative: use git/pip to install (but we don't have git in the container ;-))
 #RUN apt-get update && apt-get install -y git
 #RUN pip install git+https://github.com/sonata-nfv/tng-sdk-validation.git
 
