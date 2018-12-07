@@ -205,11 +205,19 @@ def parse_args(input_args=None):
         action="store_true")
 
     parser.add_argument(
-        "--no-autoversion",
+        "--skip-autoversion",
         help="Auto. increase package version field.",
         required=False,
         default=False,
-        dest="no_autoversion",
+        dest="skip_autoversion",
+        action="store_true")
+
+    parser.add_argument(
+        "--skip-validation",
+        help="Don't call the validator during pack/unpack",
+        required=False,
+        default=False,
+        dest="skip_validation",
         action="store_true")
 
     parser.add_argument(

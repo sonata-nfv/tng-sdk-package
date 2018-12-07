@@ -512,7 +512,7 @@ class EtsiPackager(CsarBasePackager):
         """
         Find package_type based on key names of block0.
         """
-        for k, v in etsi_mf[0].items():
+        for k, _ in etsi_mf[0].items():
             if "ns_" in k:
                 return "application/vnd.etsi.package.nsp"
             elif "test_" in k:
@@ -874,13 +874,9 @@ class TangoPackager(EtsiPackager):
             return NapdRecord()
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
-        # 0. validate project with external validator
-        vok, verror = validate_project_with_external_validator(project_path)
-        if not vok:
-            LOG.error(str(verror))
-            self.error_msg = str(verror)
-            return NapdRecord(error=str(verror))
         try:
+            # 0. validate project with external validator
+            validate_project_with_external_validator(self.args, project_path)
             # 1. find and load project descriptor
             if project_path is None or project_path == "None":
                 raise MissingInputException("No project path. Abort.")

@@ -38,16 +38,38 @@ from tngsdk.package.logger import TangoLogger
 LOG = TangoLogger.getLogger(__name__)
 
 
-def validate_project_with_external_validator(project_path):
+class TangoValidationException(BaseException):
+    pass
+
+
+def validate_project_with_external_validator(args, project_path):
     """
     Try to use an external validator (typically tng-sdk-validation)
     to validate the given service project.
+    Throws TangoValidationException on validation error.
     """
+    # shall we validate?
+    if args.skip_validation:
+        LOG.warning("Skipping validation upon user request (--no-validation).")
+        return
+    # check if external validator is available?
+    try:
+        from tngsdk.validation import cli as v_cli
+        from tngsdk.validation.validator import Validator
+    except BaseException as ex:
+        del ex
+        LOG.error("Skipping validation: tng-sdk-validate not installed?")
+        return
+    # ok! let us valiade ...
+    v = Validator()
+    v_args = v_cli.parse_args([])
+    v_cli.dispatch(v_args, v)
+
+    # Impl: status
     # called in do_package
     # not yet called for unpacker (needs to be called from
     #    filestore backend right now, (maybe unpack to tmp project
     #    for validation))
-    return True, None  # return bool, error_msg
 
 
 def validate_yaml_online(data, schema_uri=None):
