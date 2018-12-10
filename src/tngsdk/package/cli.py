@@ -42,7 +42,8 @@ from tngsdk.package.logger import TangoLogger
 LOG = TangoLogger.getLogger(__name__)
 
 
-DEFAULT_WORKSPACE_DIR = os.path.join(os.path.expanduser("~"), ".tng-schema")
+DEFAULT_WORKSPACE_DIR = os.path.join(
+    os.path.expanduser("~"), ".tng-workspace")
 
 
 def dispatch(args):
