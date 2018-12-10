@@ -119,7 +119,7 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             LOG.debug("Copying {}\n\t to {}".format(s, d))
             shutil.copyfile(s, d)
 
-    def store(self, napdr, wd, pkg_file):
+    def store(self, napdr, wd, pkg_file, output=None):
         """
         Turns the given unpacked package to a
         5GTANGO SDK project in the local filesystem.
@@ -129,8 +129,12 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         LOG.debug("tng-prj-be: Generated project manifest: {}"
                   .format(pm))
         # 2. create project directory
+        if output is None:
+            output = self.args.output
+        if pkg_file is None:
+            pkg_file = "tng-pkg.tgo"
         pd = os.path.join(
-            self.args.output,
+            output,
             os.path.splitext(os.path.basename(pkg_file))[0])
         self._makedirs(pd)
         # 3. create empty project tree

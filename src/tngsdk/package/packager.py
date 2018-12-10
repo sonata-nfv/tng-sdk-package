@@ -46,6 +46,7 @@ import pyrfc3339
 import hashlib
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.validator import validate_project_with_external_validator
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
 from tngsdk.package.logger import TangoLogger
 
@@ -848,6 +849,26 @@ class TangoPackager(EtsiPackager):
             self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
+        # validate network service using tng-validate
+        try:
+            # we do a trick here, since tng-validate needs a
+            # 5GTANGO project strcuture to work on, and we not
+            # always use the 5GTANGO project storage backend:
+            # Solution: we store it to a temporary 5GTANGO project
+            # only used for the validation step.
+            tmp_project_path = tempfile.mkdtemp()
+            tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
+            tmp_napdr = tmp_tpfbe.store(
+                napdr, wd, self.args.unpackage, output=tmp_project_path)
+            tmp_project_path = tmp_napdr.metadata["_storage_location"]
+            validate_project_with_external_validator(
+                self.args, tmp_project_path)
+            shutil.rmtree(tmp_project_path)
+        except BaseException as e:
+            LOG.exception(str(e))
+            self.error_msg = str(e)
+            napdr.error = str(e)
+            return napdr
         # call storage backend
         if self.storage_backend is not None:
             try:
@@ -968,7 +989,7 @@ def creat_zip_file_from_directory(path_src, path_dest):
     LOG.debug("Zipping '{}' ...".format(path_dest))
     t_start = time.time()
     zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(path_src):
+    for root, _, files in os.walk(path_src):
         for f in files:
             zf.write(os.path.join(root, f),
                      os.path.relpath(

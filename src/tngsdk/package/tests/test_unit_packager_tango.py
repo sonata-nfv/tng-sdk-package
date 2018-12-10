@@ -245,7 +245,7 @@ class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
 
     def setUp(self):
         # list can manually define CLI arguments
-        self.default_args = parse_args([])
+        self.default_args = parse_args(["--skip-validation"])
         self.p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
         self.assertIn("TangoPackager", str(type(self.p)))
 
@@ -257,7 +257,7 @@ class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
         self.assertEqual(len(tosca_meta), 2)
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(len(etsi_mf), 6)
-        napd, npath = self.p._read_napd(wd, tosca_meta)
+        napd, _ = self.p._read_napd(wd, tosca_meta)
         self.assertIn("descriptor_schema", napd)
 
     def test_read_missing_metadata(self):
@@ -268,7 +268,7 @@ class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
         self.assertEqual(tosca_meta, [{}])
         etsi_mf = self.p._read_etsi_manifest(wd, tosca_meta)
         self.assertEqual(etsi_mf, [{}])
-        napd, npath = self.p._read_napd(wd, tosca_meta)
+        napd, _ = self.p._read_napd(wd, tosca_meta)
         self.assertNotIn("descriptor_schema", napd)
 
     def test_read_malformed_metadata(self):

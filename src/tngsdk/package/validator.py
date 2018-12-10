@@ -80,12 +80,6 @@ def validate_project_with_external_validator(args, project_path):
         raise TangoValidationException("tng-validate error(s): '{}'"
                                        .format(v.errors))
 
-    # Impl: status
-    # called in do_package
-    # not yet called for unpacker (needs to be called from
-    #    filestore backend right now, (maybe unpack to tmp project
-    #    for validation))
-
 
 def validate_yaml_online(data, schema_uri=None):
     """

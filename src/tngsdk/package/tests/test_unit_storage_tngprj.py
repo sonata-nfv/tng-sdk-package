@@ -82,7 +82,9 @@ class TngSdkPackageStorageTngPrjTest(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(sl, "sources/")))
         self.assertTrue(os.path.exists(
-            os.path.join(sl, "sources/Definitions/mynsd.yaml")))
+            os.path.join(
+                sl, "sources/Definitions/sources/nsd/nsd-sample.yml")))
         self.assertTrue(os.path.exists(
-            os.path.join(sl, "sources/Definitions/myvnfd.yaml")))
+            os.path.join(
+                sl, "sources/Definitions/sources/vnfd/vnfd-sample.yml")))
         shutil.rmtree(pd)

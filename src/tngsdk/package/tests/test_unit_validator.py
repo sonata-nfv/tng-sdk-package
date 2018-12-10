@@ -44,17 +44,24 @@ class TngSdkPackageValidatorTest(unittest.TestCase):
     """
 
     def test_do_unpackage_good_package(self):
-        return
-        # self.default_args = parse_args([])
-        # self.default_args.unpackage = misc_file(
-        #    "5gtango-ns-package-example.tgo")
-        # self.p = PM.new_packager(
-        #    self.default_args, pkg_format="eu.5gtango")
-        # r = self.p._do_unpackage()
-        # self.assertIsNone(r.error)
+        self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example.tgo")
+        self.p = PM.new_packager(
+           self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNone(r.error)
 
     def test_do_unpackage_bad_package(self):
-        pass
+        self.default_args = parse_args([])
+        self.default_args.unpackage = misc_file(
+            "5gtango-ns-package-example-bad.tgo")
+        self.p = PM.new_packager(
+           self.default_args, pkg_format="eu.5gtango")
+        r = self.p._do_unpackage()
+        self.assertIsNotNone(r.error)
+        self.assertIn("tng-validate error", r.error)
+        self.assertIn("Failed to read service function descriptors", r.error)
 
     def test_do_package_good_project(self):
         self.default_args = parse_args([])
