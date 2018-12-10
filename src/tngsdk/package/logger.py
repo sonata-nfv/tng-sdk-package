@@ -111,7 +111,11 @@ class TangoLogger(object):
         """
         # all TangoLoggers are prefixed for global setup
         logger = logging.getLogger("tango.{}".format(name))
-        coloredlogs.install(logger=logger)
+        logger.propagate = False  # important to not emit logs twice
+        coloredlogs.install(
+            logger=logger,
+            fmt="%(asctime)s %(hostname)s %(name)s:l%(lineno)d"
+            + " %(levelname)s %(message)s")
         th = TangoJsonLogHandler()
         logger.addHandler(th)
         # configure logger

@@ -46,17 +46,30 @@ ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
 ENV LOGLEVEL INFO
 ENV LOGJSON True
 
+# Install basics
+RUN apt-get update && apt-get install -y git  # We net git to install other tng-* tools.
+RUN pip install flake8
+
+# Install other 5GTAGNO SDK components
+# - tng-sdk-project (required by validator)
+RUN pip install git+https://github.com/sonata-nfv/tng-sdk-project.git
+RUN tng-sdk-project -h
+RUN tng-wks  # create the default workspace
+# - tng-sdk-validate (required to validate packages)
+RUN pip install git+https://github.com/sonata-nfv/tng-sdk-validation.git
+RUN tng-sdk-validate -h
 
 #
-# Installation
+# Installation (packager)
 #
-RUN pip install flake8
+WORKDIR /
 ADD . /tng-sdk-package
 WORKDIR /tng-sdk-package
-RUN python setup.py install
+RUN python setup.py develop
 
 #
 # Runtime
 #
+WORKDIR /tng-sdk-package
 EXPOSE 5099
 CMD ["tng-package","-s"]

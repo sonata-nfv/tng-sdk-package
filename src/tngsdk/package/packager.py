@@ -45,6 +45,8 @@ import pprint
 import pyrfc3339
 import hashlib
 from tngsdk.package.validator import validate_yaml_online
+from tngsdk.package.validator import validate_project_with_external_validator
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
 from tngsdk.package.logger import TangoLogger
 
@@ -511,7 +513,7 @@ class EtsiPackager(CsarBasePackager):
         """
         Find package_type based on key names of block0.
         """
-        for k, v in etsi_mf[0].items():
+        for k, _ in etsi_mf[0].items():
             if "ns_" in k:
                 return "application/vnd.etsi.package.nsp"
             elif "test_" in k:
@@ -847,6 +849,26 @@ class TangoPackager(EtsiPackager):
             self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
+        # validate network service using tng-validate
+        try:
+            # we do a trick here, since tng-validate needs a
+            # 5GTANGO project strcuture to work on, and we not
+            # always use the 5GTANGO project storage backend:
+            # Solution: we store it to a temporary 5GTANGO project
+            # only used for the validation step.
+            tmp_project_path = tempfile.mkdtemp()
+            tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
+            tmp_napdr = tmp_tpfbe.store(
+                napdr, wd, self.args.unpackage, output=tmp_project_path)
+            tmp_project_path = tmp_napdr.metadata["_storage_location"]
+            validate_project_with_external_validator(
+                self.args, tmp_project_path)
+            shutil.rmtree(tmp_project_path)
+        except BaseException as e:
+            LOG.exception(str(e))
+            self.error_msg = str(e)
+            napdr.error = str(e)
+            return napdr
         # call storage backend
         if self.storage_backend is not None:
             try:
@@ -874,6 +896,8 @@ class TangoPackager(EtsiPackager):
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
+            # 0. validate project with external validator
+            validate_project_with_external_validator(self.args, project_path)
             # 1. find and load project descriptor
             if project_path is None or project_path == "None":
                 raise MissingInputException("No project path. Abort.")
@@ -965,7 +989,7 @@ def creat_zip_file_from_directory(path_src, path_dest):
     LOG.debug("Zipping '{}' ...".format(path_dest))
     t_start = time.time()
     zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(path_src):
+    for root, _, files in os.walk(path_src):
         for f in files:
             zf.write(os.path.join(root, f),
                      os.path.relpath(

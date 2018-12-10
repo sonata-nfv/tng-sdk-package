@@ -111,6 +111,18 @@ packages_parser.add_argument("skip_store",
                              required=False,
                              default=False,
                              help="Skip catalog upload of contents (optional)")
+packages_parser.add_argument("skip_validation",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=False,
+                             help="Skip service validation (optional)")
+packages_parser.add_argument("workspace",
+                             location="form",
+                             help="Workspace (ignored for now)")
+packages_parser.add_argument("output",
+                             location="form",
+                             help="Output (ignored for now)")
 
 packages_status_item_get_return_model = api_v1.model(
     "PackagesStatusItemGetReturn",
@@ -257,9 +269,11 @@ class Packages(Resource):
         args.no_autoversion = False
         args.store_skip = False
         if app.cliargs is not None:
+            args.output = None
+            args.workspace = None
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
-            args.no_autoversion = app.cliargs.no_autoversion
+            args.no_autoversion = app.cliargs.skip_autoversion
             args.store_skip = app.cliargs.store_skip
         # select and instantiate storage backend
         sb = None
@@ -345,6 +359,8 @@ class Project(Resource):
         args.package = None  # fill with path to uploaded project
         args.unpackage = None
         # pass CLI args to REST args
+        args.output = None
+        args.workspace = None
         args.offline = False
         args.no_checksums = False
         args.no_autoversion = False
