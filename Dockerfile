@@ -46,31 +46,26 @@ ENV CATALOGUE_URL http://tng-cat:4011/catalogues/api/v2
 ENV LOGLEVEL INFO
 ENV LOGJSON True
 
+# Install basics
+RUN apt-get update && apt-get install -y git  # We net git to install other tng-* tools.
+RUN pip install flake8
+
+# Install other 5GTAGNO SDK components
+# - tng-sdk-project (required by validator)
+RUN pip install git+https://github.com/sonata-nfv/tng-sdk-project.git
+RUN tng-sdk-project -h
+RUN tng-wks  # create the default workspace
+# - tng-sdk-validate (required to validate packages)
+RUN pip install git+https://github.com/sonata-nfv/tng-sdk-validation.git
+RUN tng-sdk-validate -h
 
 #
 # Installation (packager)
 #
-RUN pip install flake8
+WORKDIR /
 ADD . /tng-sdk-package
 WORKDIR /tng-sdk-package
-RUN python setup.py install
-
-#
-# Installation (validator)
-# We include tng-sdk-validation by default in this container so that the
-# packager can always make use of it to validate packages/projects.
-# Installation is done by fetching the HEAD of MASTER from GitHub.
-#
-# use wget/zip to install
-RUN apt-get update && apt-get install -y wget unzip
-WORKDIR /
-RUN wget https://github.com/sonata-nfv/tng-sdk-validation/archive/master.zip
-RUN unzip master.zip
-WORKDIR /tng-sdk-validation-master
-RUN python setup.py install
-# alternative: use git/pip to install (but we don't have git in the container ;-))
-#RUN apt-get update && apt-get install -y git
-#RUN pip install git+https://github.com/sonata-nfv/tng-sdk-validation.git
+RUN python setup.py develop
 
 #
 # Runtime

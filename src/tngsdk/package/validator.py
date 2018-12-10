@@ -69,6 +69,16 @@ def validate_project_with_external_validator(args, project_path):
         "--workspace", args.workspace  # workspace path
         ])
     v_cli.dispatch(v_args, v)
+    # check validation result
+    # - warnings
+    if v.warning_count > 0:
+        LOG.warning("There have been {} tng-validate warnings"
+                    .format(v.warning_count))
+        LOG.warning("tng-validate warnings: '{}'".format(v.warnings))
+    # - errors
+    if v.error_count > 0:
+        raise TangoValidationException("tng-validate error(s): '{}'"
+                                       .format(v.errors))
 
     # Impl: status
     # called in do_package
