@@ -8,7 +8,7 @@ author: "tango"
 description: "A sample NSD with one sample VNFDs"
 
 # involved network functions
-network_functions:
+network_functions1:  # additional error to let sytax check fail
   - vnf_id: "vnf1"
     vnf_vendor: "eu.5gtango.bad"
     vnf_name: "sample-vnf"
