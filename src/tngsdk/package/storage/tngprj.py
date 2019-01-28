@@ -30,14 +30,16 @@
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
 
-import logging
 import os
 import shutil
 import yaml
 from tngsdk.package.storage import BaseStorageBackend
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
+
+
 # where to put the artifacts in the project structure
 BASE_ARTIFACT_DIR = "sources/"
 PROJECT_MANIFEST_NAME = "project.yml"
@@ -117,7 +119,7 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             LOG.debug("Copying {}\n\t to {}".format(s, d))
             shutil.copyfile(s, d)
 
-    def store(self, napdr, wd, pkg_file):
+    def store(self, napdr, wd, pkg_file, output=None):
         """
         Turns the given unpacked package to a
         5GTANGO SDK project in the local filesystem.
@@ -127,8 +129,12 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         LOG.debug("tng-prj-be: Generated project manifest: {}"
                   .format(pm))
         # 2. create project directory
+        if output is None:
+            output = self.args.output
+        if pkg_file is None:
+            pkg_file = "tng-pkg.tgo"
         pd = os.path.join(
-            self.args.output,
+            output,
             os.path.splitext(os.path.basename(pkg_file))[0])
         self._makedirs(pd)
         # 3. create empty project tree

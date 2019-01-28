@@ -29,7 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import argparse
 import os
 import sys
@@ -37,9 +36,14 @@ from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
+
+
+DEFAULT_WORKSPACE_DIR = os.path.join(
+    os.path.expanduser("~"), ".tng-workspace")
 
 
 def dispatch(args):
@@ -84,6 +88,8 @@ def dispatch(args):
 def display_result_unpackage(args, r):
     if args.quiet:
         return
+    if os.environ.get("LOGJSON", args.logjson):
+        return
     print("=" * 79)
     print("U N P A C K A G I N G   R E P O R T")
     print("=" * 79)
@@ -103,6 +109,8 @@ def display_result_unpackage(args, r):
 
 def display_result_package(args, r):
     if args.quiet:
+        return
+    if os.environ.get("LOGJSON", args.logjson):
         return
     print("=" * 79)
     print("P A C K A G I N G   R E P O R T")
@@ -168,6 +176,21 @@ def parse_args(input_args=None):
         action="store_true")
 
     parser.add_argument(
+        "--loglevel",
+        help="Directly specify loglevel. Default: INFO",
+        required=False,
+        default=None,
+        dest="log_level")
+
+    parser.add_argument(
+        "--logjson",
+        help="Use 5GTANGO JSON-based logging. Default: False",
+        required=False,
+        default=False,
+        dest="logjson",
+        action="store_true")
+
+    parser.add_argument(
         "-q",
         "--quiet",
         help="Do not print packaging info.",
@@ -186,12 +209,30 @@ def parse_args(input_args=None):
         action="store_true")
 
     parser.add_argument(
-        "--no-autoversion",
+        "--skip-autoversion",
         help="Auto. increase package version field.",
         required=False,
         default=False,
-        dest="no_autoversion",
+        dest="skip_autoversion",
         action="store_true")
+
+    parser.add_argument(
+        "--skip-validation",
+        help="Don't call the validator during pack/unpack",
+        required=False,
+        default=False,
+        dest="skip_validation",
+        action="store_true")
+
+    # only needed for validator
+    parser.add_argument(
+        "-w", "--workspace",
+        help="Location of existing workspace (see: tng-project -h) "
+             "If not specified will assume '{}'"
+              .format(DEFAULT_WORKSPACE_DIR),
+        default=DEFAULT_WORKSPACE_DIR,
+        dest="workspace",
+        required=False)
 
     parser.add_argument(
         "--offline",

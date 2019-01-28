@@ -29,14 +29,57 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
-import os
 import requests
 import yaml
 from jsonschema import validate
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
+
+
+class TangoValidationException(BaseException):
+    pass
+
+
+def validate_project_with_external_validator(args, project_path):
+    """
+    Try to use an external validator (typically tng-sdk-validation)
+    to validate the given service project.
+    Throws TangoValidationException on validation error.
+    """
+    # shall we validate?
+    if args.skip_validation:
+        LOG.warning("Skipping validation upon user request (--no-validation).")
+        return
+    # check if external validator is available?
+    try:
+        from tngsdk.validation import cli as v_cli
+        from tngsdk.validation.validator import Validator
+    except BaseException as ex:
+        del ex
+        LOG.error("Skipping validation: tng-sdk-validate not installed?")
+        return
+    # ok! let us valiade ...
+    v = Validator()
+    # define arguments for validator
+    v_args = v_cli.parse_args([
+        # levels -s / -i / -t
+        "-s",  # TODO  change to -i if CNF are supported by validator
+        "--project", project_path,  # path to project
+        "--workspace", args.workspace  # workspace path
+        ])
+    v_cli.dispatch(v_args, v)
+    # check validation result
+    # - warnings
+    if v.warning_count > 0:
+        LOG.warning("There have been {} tng-validate warnings"
+                    .format(v.warning_count))
+        LOG.warning("tng-validate warnings: '{}'".format(v.warnings))
+    # - errors
+    if v.error_count > 0:
+        raise TangoValidationException("tng-validate error(s): '{}'"
+                                       .format(v.errors))
 
 
 def validate_yaml_online(data, schema_uri=None):

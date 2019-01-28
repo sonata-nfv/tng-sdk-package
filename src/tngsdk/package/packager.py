@@ -29,7 +29,6 @@
 # the Horizon 2020 and 5G-PPP programmes. The authors would like to
 # acknowledge the contributions of their colleagues of the SONATA
 # partner consortium (www.5gtango.eu).
-import logging
 import os
 import shutil
 import threading
@@ -46,10 +45,13 @@ import pprint
 import pyrfc3339
 import hashlib
 from tngsdk.package.validator import validate_yaml_online
+from tngsdk.package.validator import validate_project_with_external_validator
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
+from tngsdk.package.logger import TangoLogger
 
 
-LOG = logging.getLogger(os.path.basename(__file__))
+LOG = TangoLogger.getLogger(__name__)
 
 
 DESCRIPTOR_MIME_TYPES = ["application/vnd.5gtango.nsd",
@@ -234,7 +236,8 @@ class Packager(object):
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
-        LOG.info("Packager created: {}".format(self))
+        LOG.info("Packager created: {}".format(self),
+                 extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
         if (self.storage_backend is None
                 and self.args.unpackage is not None):
@@ -276,7 +279,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_unpackage()
         LOG.info("Packager done ({:.4f}s): {} error: {}".format(
-            time.time()-t_start, self, self.result.error))
+            time.time()-t_start, self, self.result.error),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         if self.result.error is None:
             self.status = PkgStatus.SUCCESS
         else:
@@ -290,7 +295,9 @@ class Packager(object):
         # call format specific implementation
         self.result = self._do_package()
         LOG.info("Packager done ({:.4f}s): {}".format(
-            time.time()-t_start, self))
+            time.time()-t_start, self),
+            extra={"start_stop": "STOP",
+                   "time_elapsed": str(time.time()-t_start)})
         self.status = PkgStatus.SUCCESS
         # callback
         if callback_func:
@@ -506,7 +513,7 @@ class EtsiPackager(CsarBasePackager):
         """
         Find package_type based on key names of block0.
         """
-        for k, v in etsi_mf[0].items():
+        for k, _ in etsi_mf[0].items():
             if "ns_" in k:
                 return "application/vnd.etsi.package.nsp"
             elif "test_" in k:
@@ -673,6 +680,7 @@ class TangoPackager(EtsiPackager):
         except AssertionError as e:
             m = "Package metadata vailidation failed. Package unusable. Abort."
             LOG.exception(m)
+            del e
             raise MetadataValidationException(m)
         return False
 
@@ -841,6 +849,26 @@ class TangoPackager(EtsiPackager):
             self.error_msg = str(e)
             napdr.error = str(e)
             return napdr
+        # validate network service using tng-validate
+        try:
+            # we do a trick here, since tng-validate needs a
+            # 5GTANGO project strcuture to work on, and we not
+            # always use the 5GTANGO project storage backend:
+            # Solution: we store it to a temporary 5GTANGO project
+            # only used for the validation step.
+            tmp_project_path = tempfile.mkdtemp()
+            tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
+            tmp_napdr = tmp_tpfbe.store(
+                napdr, wd, self.args.unpackage, output=tmp_project_path)
+            tmp_project_path = tmp_napdr.metadata["_storage_location"]
+            validate_project_with_external_validator(
+                self.args, tmp_project_path)
+            shutil.rmtree(tmp_project_path)
+        except BaseException as e:
+            LOG.exception(str(e))
+            self.error_msg = str(e)
+            napdr.error = str(e)
+            return napdr
         # call storage backend
         if self.storage_backend is not None:
             try:
@@ -868,6 +896,8 @@ class TangoPackager(EtsiPackager):
         LOG.info("Creating 5GTANGO package using project: '{}'"
                  .format(project_path))
         try:
+            # 0. validate project with external validator
+            validate_project_with_external_validator(self.args, project_path)
             # 1. find and load project descriptor
             if project_path is None or project_path == "None":
                 raise MissingInputException("No project path. Abort.")
@@ -959,7 +989,7 @@ def creat_zip_file_from_directory(path_src, path_dest):
     LOG.debug("Zipping '{}' ...".format(path_dest))
     t_start = time.time()
     zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(path_src):
+    for root, _, files in os.walk(path_src):
         for f in files:
             zf.write(os.path.join(root, f),
                      os.path.relpath(
@@ -1113,6 +1143,7 @@ def validate_file_checksum(path, algorithm, hash_str):
     except BaseException as e:
         msg = "Coudn't compute file hash {}".format(path)
         LOG.exeception(msg)
+        del e
         raise ChecksumException(msg)
     # compare checksums
     if h_file != hash_str:
