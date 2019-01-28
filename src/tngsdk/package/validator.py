@@ -57,8 +57,8 @@ def validate_project_with_external_validator(args, project_path):
         from tngsdk.validation import cli as v_cli
         from tngsdk.validation.validator import Validator
     except BaseException as ex:
-        del ex
         LOG.error("Skipping validation: tng-sdk-validate not installed?")
+        LOG.debug(ex)
         return
     # ok! let us valiade ...
     v = Validator()
