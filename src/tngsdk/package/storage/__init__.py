@@ -32,6 +32,7 @@
 
 import os
 import yaml
+import re
 from tngsdk.package.logger import TangoLogger
 
 
@@ -65,8 +66,9 @@ class BaseStorageBackend(object):
         match the given mime type.
         """
         r = list()
+        pattern = re.compile(mime_type)
         for pc in napdr.package_content:
-            if mime_type in pc.get("content-type"):
+            if pattern.search(pc.get("content-type")) is not None:
                 r.append(os.path.join(wd, pc.get("source")))
         return r
 
@@ -76,8 +78,9 @@ class BaseStorageBackend(object):
         not match the given mime type.
         """
         r = list()
+        pattern = re.compile(mime_type)
         for pc in napdr.package_content:
-            if mime_type not in pc.get("content-type"):
+            if pattern.search(pc.get("content-type")) is None:
                 r.append(os.path.join(wd, pc.get("source")))
         return r
 
