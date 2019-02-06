@@ -966,23 +966,23 @@ def find_root_folder_of_pkg(d):
 
 
 def extract_zip_file_to_temp(path_zip, path_dest=None):
-        """
-        Simply extract the entire ZIP file for now.
-        Might be improved for larger files.
-        Always extract to a temp folder to work on.
-        """
-        if path_dest is None:
-            path_dest = tempfile.mkdtemp()
-        LOG.debug("Unzipping '{}' ...".format(path_zip))
-        t_start = time.time()
-        # unzipping
-        with zipfile.ZipFile(path_zip, "r") as f:
-            f.extractall(path_dest)
-        LOG.debug("Unzipping done ({:.4f}s)".format(time.time()-t_start))
-        # get path of output folder (it is based on zip name)
-        wd = find_root_folder_of_pkg(path_dest)
-        LOG.debug("Working root '{}'".format(wd))
-        return wd
+    """
+    Simply extract the entire ZIP file for now.
+    Might be improved for larger files.
+    Always extract to a temp folder to work on.
+    """
+    if path_dest is None:
+        path_dest = tempfile.mkdtemp()
+    LOG.debug("Unzipping '{}' ...".format(path_zip))
+    t_start = time.time()
+    # unzipping
+    with zipfile.ZipFile(path_zip, "r") as f:
+        f.extractall(path_dest)
+    LOG.debug("Unzipping done ({:.4f}s)".format(time.time()-t_start))
+    # get path of output folder (it is based on zip name)
+    wd = find_root_folder_of_pkg(path_dest)
+    LOG.debug("Working root '{}'".format(wd))
+    return wd
 
 
 def creat_zip_file_from_directory(path_src, path_dest):

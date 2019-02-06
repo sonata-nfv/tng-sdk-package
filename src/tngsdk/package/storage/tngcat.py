@@ -47,6 +47,8 @@ class TangoCatalogBackend(BaseStorageBackend):
 
     def __init__(self, args):
         self.args = args
+        if "username" not in self.args:
+            self.args.username = None
         # get environment config
         self.cat_url = os.environ.get(
             "CATALOGUE_URL",  # ENV CATALOGUE_URL
@@ -81,45 +83,60 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
         return (len(self._get_artifact(vendor, name, version, endpoint)) > 0)
 
-    def _post_yaml_data_to_catalog(self, endpoint, data):
+    def _build_request_params(self, arg_params):
+        """
+        Build URL parameters for requests to catalog.
+        """
+        params = dict()
+        if self.args.username is not None:
+            params["username"] = self.args.username
+        if arg_params is not None:
+            params.update(params)
+        return params
+
+    def _post_yaml_data_to_catalog(self, endpoint, data, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         LOG.info("tng-cat-be: POST YAML data to {}"
                  .format(url))
         return requests.post(url,
+                             params=self._build_request_params(arg_params),
                              data=yaml.dump(data),
                              headers={"Content-Type":
                                       "application/x-yaml"})
 
-    def _post_yaml_file_to_catalog(self, endpoint, path):
+    def _post_yaml_file_to_catalog(self, endpoint, path, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         LOG.info("tng-cat-be: POST YAML to {} content {}".format(url, path))
         with open(path, "rb") as f:
             data = f.read()
             return requests.post(url,
+                                 params=self._build_request_params(arg_params),
                                  data=data,
                                  headers={"Content-Type":
                                           "application/x-yaml"})
 
-    def _post_json_data_to_catalog(self, endpoint, data):
+    def _post_json_data_to_catalog(self, endpoint, data, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         LOG.info("tng-cat-be: POST JSON data to {}"
                  .format(url))
         return requests.post(url,
+                             params=self._build_request_params(arg_params),
                              data=json.dumps(data),
                              headers={"Content-Type":
                                       "application/json"})
 
-    def _post_json_file_to_catalog(self, endpoint, path):
+    def _post_json_file_to_catalog(self, endpoint, path, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         LOG.info("tng-cat-be: POST JSON to {} content {}".format(url, path))
         with open(path, "rb") as f:
             data = f.read()
             return requests.post(url,
+                                 params=self._build_request_params(arg_params),
                                  data=data,
                                  headers={"Content-Type":
                                           "application/json"})
 
-    def _post_pkg_file_to_catalog(self, endpoint, path):
+    def _post_pkg_file_to_catalog(self, endpoint, path, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         cd_str = "attachment; filename={}".format(os.path.basename(path))
         LOG.info("tng-cat-be: POST PKG to {} content {} using {}"
@@ -127,11 +144,12 @@ class TangoCatalogBackend(BaseStorageBackend):
         with open(path, "rb") as f:
             data = f.read()
             return requests.post(url,
+                                 params=self._build_request_params(arg_params),
                                  data=data,
                                  headers={"Content-Type": "application/zip",
                                           "Content-Disposition": cd_str})
 
-    def _post_generic_file_to_catalog(self, endpoint, path):
+    def _post_generic_file_to_catalog(self, endpoint, path, arg_params=None):
         url = "{}{}".format(self.cat_url, endpoint)
         cd_str = "attachment; filename={}".format(os.path.basename(path))
         LOG.info("tng-cat-be: POST generic file to {} content {} using {}"
@@ -139,7 +157,9 @@ class TangoCatalogBackend(BaseStorageBackend):
         with open(path, "rb") as f:
             data = f.read()
             return requests.post(
-                url, data=data,
+                url,
+                params=self._build_request_params(arg_params),
+                data=data,
                 headers={"Content-Type": "application/octet-stream",
                          "Content-Disposition": cd_str})
 
