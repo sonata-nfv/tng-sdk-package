@@ -95,6 +95,11 @@ packages_parser.add_argument("callback_url",
                              required=False,
                              default=None,
                              help="URL called after unpackaging (optional)")
+packages_parser.add_argument("username",
+                             location="form",
+                             required=False,
+                             default=None,
+                             help="Username of the uploader (optional)")
 packages_parser.add_argument("layer",
                              location="form",
                              required=False,

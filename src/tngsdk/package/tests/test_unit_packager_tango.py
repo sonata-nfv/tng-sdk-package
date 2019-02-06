@@ -221,7 +221,7 @@ class TngSdkPackageTangoPackagerSyntheticTest(unittest.TestCase):
 
     def _create_file(self, wd, path, data):
         with open(os.path.join(wd, path), "w") as f:
-                f.write(data)
+            f.write(data)
 
     def findConentEntry(self, napdr, source):
         for c in napdr.package_content:

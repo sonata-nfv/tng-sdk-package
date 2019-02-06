@@ -125,6 +125,22 @@ class TngSdkPackageRestTest(unittest.TestCase):
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
 
+    def test_package_v1_endpoint_with_username(self):
+        # do a malformed post
+        r = self.app.post("/api/v1/packages")
+        self.assertEqual(r.status_code, 400)
+        # do a post with a real package
+        r = self.app.post("/api/v1/packages",
+                          content_type="multipart/form-data",
+                          data={"package": (
+                              open("misc/5gtango-ns-package-example.tgo",
+                                   "rb"), "5gtango-ns-package-example.tgo"),
+                                "skip_store": True,
+                                "username": "test_user1"})
+        self.assertEqual(r.status_code, 200)
+        rd = json.loads(r.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd)
+
     def test_packager_v1_status_endpoint(self):
         # do a post with a real package
         r = self.app.post("/api/v1/packages",
