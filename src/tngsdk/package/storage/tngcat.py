@@ -173,14 +173,17 @@ class TangoCatalogBackend(BaseStorageBackend):
         del n["error"]
         return self._post_yaml_data_to_catalog("/packages", n)
 
-    def _post_vnf_descriptors(self, vnfd):
-        return self._post_yaml_file_to_catalog("/vnfs", vnfd)
+    def _post_vnf_descriptors(self, vnfd, arg_params):
+        return self._post_yaml_file_to_catalog(
+            "/vnfs", vnfd, arg_params=arg_params)
 
-    def _post_ns_descriptors(self, nsd):
-        return self._post_yaml_file_to_catalog("/network-services", nsd)
+    def _post_ns_descriptors(self, nsd, arg_params):
+        return self._post_yaml_file_to_catalog(
+            "/network-services", nsd, arg_params=arg_params)
 
-    def _post_test_descriptors(self, tstd):
-        return self._post_yaml_file_to_catalog("/tests", tstd)
+    def _post_test_descriptors(self, tstd, arg_params):
+        return self._post_yaml_file_to_catalog(
+            "/tests", tstd, arg_params=arg_params)
 
     def _parse_cat_yaml_response(self, response):
         try:
@@ -215,6 +218,8 @@ class TangoCatalogBackend(BaseStorageBackend):
             if triple is not None:
                 # annotate
                 pc["id"] = triple
+            else:  # fallback: filename
+                pc["id"] = pc.get("source")
 
     def _annotate_napdr_with_pkg_file(
             self, napdr, pkg_file_uuid, pkg_file):
@@ -256,10 +261,11 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             raise StorageBackendDuplicatedException(msg)
         # 1. collect and upload VNFDs
         vnfds = self._get_package_content_of_type(
-            napdr, wd, "application/vnd.5gtango.vnfd")
+            napdr, wd, "application/vnd.*.vnfd")  # 5gtango, osm, onap
         file_catalog_uuids = dict()
-        for vnfd in vnfds:
-            vnfd_resp = self._post_vnf_descriptors(vnfd)
+        for mime, vnfd in vnfds.items():
+            vnfd_resp = self._post_vnf_descriptors(
+                vnfd, arg_params={"platform": mime_to_pltfrm(mime)})
             if vnfd_resp.status_code != 201 and vnfd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload VNF descriptor: ({}) {}"
@@ -271,9 +277,10 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             file_catalog_uuids[vnfd.replace(wd, "")] = vnfd_uuid
         # 2. collect and upload NSDs
         nsds = self._get_package_content_of_type(
-            napdr, wd, "application/vnd.5gtango.nsd")
-        for nsd in nsds:
-            nsd_resp = self._post_ns_descriptors(nsd)
+            napdr, wd, "application/vnd.*.nsd")  # 5gtango, osm, onap
+        for mime, nsd in nsds.items():
+            nsd_resp = self._post_ns_descriptors(
+                nsd, arg_params={"platform": mime_to_pltfrm(mime)})
             if nsd_resp.status_code != 201 and nsd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload NS descriptor: ({}) {}"
@@ -285,9 +292,10 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             file_catalog_uuids[nsd.replace(wd, "")] = nsd_uuid
         # 3. collect and upload TESTDs
         tstds = self._get_package_content_of_type(
-            napdr, wd, "application/vnd.5gtango.tstd")
-        for tstd in tstds:
-            tstd_resp = self._post_test_descriptors(tstd)
+            napdr, wd, "application/vnd.*.tstd")  # 5gtango, osm, onap
+        for mime, tstd in tstds.items():
+            tstd_resp = self._post_test_descriptors(
+                tstd, arg_params={"platform": mime_to_pltfrm(mime)})
             if tstd_resp.status_code != 201 and tstd_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload test descriptor: ({}) {}"
@@ -299,11 +307,12 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
             file_catalog_uuids[tstd.replace(wd, "")] = tstd_uuid
         # 4. collect and upload all arbitrary other files
         generic_files = self._get_package_content_not_of_type(
-            napdr, wd, "application/vnd.5gtango")
+            napdr, wd, "application/vnd.*")
         gf_filenames_uuids = dict()
-        for gf in generic_files:
+        for mime, gf in generic_files.items():
             gf_clean = os.path.basename(gf)
-            gf_resp = self._post_generic_file_to_catalog("/files", gf)
+            gf_resp = self._post_generic_file_to_catalog(
+                "/files", gf, arg_params={"platform": mime_to_pltfrm(mime)})
             if gf_resp.status_code != 201 and gf_resp.status_code != 200:
                 raise StorageBackendUploadException(
                     "tng-cat-be: could not upload generic file ({}): ({}) {}"
@@ -352,4 +361,4 @@ def mime_to_pltfrm(mime_string):
     for p in pattern:
         if p in str(mime_string).lower():
             return p
-    return "5gtango"  # default 
+    return None  # default
