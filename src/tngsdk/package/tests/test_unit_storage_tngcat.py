@@ -38,6 +38,7 @@ from requests import get as real_get
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
+from tngsdk.package.storage.tngcat import mime_to_pltfrm
 from tngsdk.package.tests.fixtures import misc_file
 
 
@@ -180,3 +181,17 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         print(files)
         self.assertEqual(len(files), 7)
         [self.assertNotIn("_nsd.yaml", item) for item in files]
+
+    def test_mime_to_pltfrm(self):
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.5gtango.nsd"), "5gtango")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.osm.nsd"), "osm")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.onap.nsd"), "onap")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "jdhadhkadhajskdhaslk"), "5gtango")

@@ -341,3 +341,15 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         self._annotate_napdr_with_cat_storage_locations(napdr, pkg_uuid)
         LOG.info("tng-cat-be: tangoCatalogBackend stored: {}".format(pkg_url))
         return napdr
+
+
+def mime_to_pltfrm(mime_string):
+    """
+    Translates MIME types to platform names used
+    by tng-cat. Returns: 5gtango|osm|onap
+    """
+    pattern = ["5gtango", "osm", "onap"]
+    for p in pattern:
+        if p in str(mime_string).lower():
+            return p
+    return "5gtango"  # default 
