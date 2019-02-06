@@ -32,6 +32,7 @@
 
 import os
 import yaml
+import re
 from tngsdk.package.logger import TangoLogger
 
 
@@ -63,22 +64,26 @@ class BaseStorageBackend(object):
         """
         Returns a list of paths to files referenced in napdr that
         match the given mime type.
+        Returns a dict: full_mime_type -> file_path
         """
-        r = list()
+        r = dict()
+        pattern = re.compile(mime_type)
         for pc in napdr.package_content:
-            if mime_type in pc.get("content-type"):
-                r.append(os.path.join(wd, pc.get("source")))
+            if pattern.search(pc.get("content-type")) is not None:
+                r[pc.get("content-type")] = os.path.join(wd, pc.get("source"))
         return r
 
     def _get_package_content_not_of_type(self, napdr, wd, mime_type):
         """
         Returns a list of paths to files referenced in napdr that
         not match the given mime type.
+        Returns a dict: full_mime_type -> file_path
         """
-        r = list()
+        r = dict()
+        pattern = re.compile(mime_type)
         for pc in napdr.package_content:
-            if mime_type not in pc.get("content-type"):
-                r.append(os.path.join(wd, pc.get("source")))
+            if pattern.search(pc.get("content-type")) is None:
+                r[pc.get("content-type")] = os.path.join(wd, pc.get("source"))
         return r
 
     def _get_id_triple_from_descriptor_file(self, path):
@@ -86,17 +91,20 @@ class BaseStorageBackend(object):
         gets vendor, name, version from YAML descriptor
         returns dict
         """
-        res = dict()
+        # 5gtango
         try:
+            res = dict()
             with open(path, 'r') as f:
                 data = yaml.load(f)
                 res["vendor"] = data["vendor"]
                 res["name"] = data["name"]
                 res["version"] = data["version"]
+            return res
         except BaseException as e:
             del e
-            return None
-        return res
+        # TODO OSM
+        # TODO ONAP
+        return None
 
     def store(self, napdr, wd, pkg_file):
         """

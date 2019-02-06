@@ -38,6 +38,7 @@ from requests import get as real_get
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
+from tngsdk.package.storage.tngcat import mime_to_pltfrm
 from tngsdk.package.tests.fixtures import misc_file
 
 
@@ -102,7 +103,7 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         # we need a packager to setup a environment to work on
         self.default_args = parse_args([])
         self.default_args.unpackage = misc_file(
-            "5gtango-ns-package-example.tgo")
+            "eu.5gtango.mixed-ns-package-example.0.1.tgo")
         self.p = PM.new_packager(
             self.default_args,
             pkg_format="eu.5gtango",
@@ -132,7 +133,66 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
         new_napdr = tcb.store(
             napdr, wd, self.default_args.unpackage)
         self.assertEqual(new_napdr.package_file_name,
-                         "5gtango-ns-package-example.tgo")
+                         "eu.5gtango.mixed-ns-package-example.0.1.tgo")
         self.assertEqual(new_napdr.package_file_uuid, "2222")
         self.assertEqual(new_napdr.metadata.get("_storage_uuid"), "1111")
         self.assertIsNotNone(new_napdr.metadata.get("_storage_location"))
+
+    def test_file_match(self):
+        tcb = TangoCatalogBackend(MockArgs())
+        self.assertIsNotNone(tcb)
+        # unpack package and keep active working dir.
+        napdr = self.p._do_unpackage()
+        wd = napdr.metadata.get("_napd_path").replace(
+            "/TOSCA-Metadata/NAPD.yaml", "")
+        # tests:
+        # ---
+        files = tcb._get_package_content_of_type(
+            napdr, wd, "application/vnd.5gtango.nsd")
+        print(files)
+        [self.assertIn("5gtango_nsd.yaml", item)
+            for mime, item in files.items()]
+        # ---
+        files = tcb._get_package_content_of_type(
+            napdr, wd, "application/vnd.*.nsd")
+        print(files)
+        self.assertEqual(len(files), 3)
+        [self.assertIn("_nsd.yaml", item) for mime, item in files.items()]
+        # ---
+        files = tcb._get_package_content_of_type(
+            napdr, wd, "application/vnd.osm*")
+        print(files)
+        self.assertEqual(len(files), 2)
+
+    def test_file_not_match(self):
+        tcb = TangoCatalogBackend(MockArgs())
+        self.assertIsNotNone(tcb)
+        # unpack package and keep active working dir.
+        napdr = self.p._do_unpackage()
+        wd = napdr.metadata.get("_napd_path").replace(
+            "/TOSCA-Metadata/NAPD.yaml", "")
+        # tests:
+        # ---
+        files = tcb._get_package_content_not_of_type(
+            napdr, wd, "application/vnd.5gtango.nsd")
+        self.assertEqual(len(files), 9)
+        # ---
+        files = tcb._get_package_content_not_of_type(
+            napdr, wd, "application/vnd.*.nsd")
+        print(files)
+        self.assertEqual(len(files), 7)
+        [self.assertNotIn("_nsd.yaml", item) for mime, item in files.items()]
+
+    def test_mime_to_pltfrm(self):
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.5gtango.nsd"), "5gtango")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.osm.nsd"), "osm")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "application/vnd.onap.nsd"), "onap")
+        self.assertEqual(
+            mime_to_pltfrm(
+                "jdhadhkadhajskdhaslk"), None)
