@@ -262,8 +262,9 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         # 1. collect and upload VNFDs
         vnfds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.*.vnfd")  # 5gtango, osm, onap
+        LOG.debug("Found VNFDs for uplaod: {}".format(vnfds))
         file_catalog_uuids = dict()
-        for mime, vnfd in vnfds.items():
+        for (mime, vnfd) in vnfds:
             vnfd_resp = self._post_vnf_descriptors(
                 vnfd, arg_params={"platform": mime_to_pltfrm(mime)})
             if vnfd_resp.status_code != 201 and vnfd_resp.status_code != 200:
@@ -278,7 +279,8 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         # 2. collect and upload NSDs
         nsds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.*.nsd")  # 5gtango, osm, onap
-        for mime, nsd in nsds.items():
+        LOG.debug("Found NSDds for uplaod: {}".format(nsds))
+        for (mime, nsd) in nsds:
             nsd_resp = self._post_ns_descriptors(
                 nsd, arg_params={"platform": mime_to_pltfrm(mime)})
             if nsd_resp.status_code != 201 and nsd_resp.status_code != 200:
@@ -293,7 +295,8 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         # 3. collect and upload TESTDs
         tstds = self._get_package_content_of_type(
             napdr, wd, "application/vnd.*.tstd")  # 5gtango, osm, onap
-        for mime, tstd in tstds.items():
+        LOG.debug("Found TSTDs for uplaod: {}".format(tstds))
+        for (mime, tstd) in tstds:
             tstd_resp = self._post_test_descriptors(
                 tstd, arg_params={"platform": mime_to_pltfrm(mime)})
             if tstd_resp.status_code != 201 and tstd_resp.status_code != 200:
@@ -308,8 +311,9 @@ this package.".format(napdr.vendor, napdr.name, napdr.version, pkg_uuid)
         # 4. collect and upload all arbitrary other files
         generic_files = self._get_package_content_not_of_type(
             napdr, wd, "application/vnd.*")
+        LOG.debug("Found generic files for uplaod: {}".format(generic_files))
         gf_filenames_uuids = dict()
-        for mime, gf in generic_files.items():
+        for (mime, gf) in generic_files:
             gf_clean = os.path.basename(gf)
             gf_resp = self._post_generic_file_to_catalog(
                 "/files", gf, arg_params={"platform": mime_to_pltfrm(mime)})
