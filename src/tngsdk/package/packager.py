@@ -856,14 +856,18 @@ class TangoPackager(EtsiPackager):
             # always use the 5GTANGO project storage backend:
             # Solution: we store it to a temporary 5GTANGO project
             # only used for the validation step.
-            tmp_project_path = tempfile.mkdtemp()
-            tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
-            tmp_napdr = tmp_tpfbe.store(
-                napdr, wd, self.args.unpackage, output=tmp_project_path)
-            tmp_project_path = tmp_napdr.metadata["_storage_location"]
-            validate_project_with_external_validator(
-                self.args, tmp_project_path)
-            shutil.rmtree(tmp_project_path)
+            if self.args.skip_validation:
+                LOG.warning(
+                    "Skipping validation upon user request (--no-validation).")
+            else:  # ok, do the validation
+                tmp_project_path = tempfile.mkdtemp()
+                tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
+                tmp_napdr = tmp_tpfbe.store(
+                    napdr, wd, self.args.unpackage, output=tmp_project_path)
+                tmp_project_path = tmp_napdr.metadata["_storage_location"]
+                validate_project_with_external_validator(
+                    self.args, tmp_project_path)
+                shutil.rmtree(tmp_project_path)
         except BaseException as e:
             LOG.exception(str(e))
             self.error_msg = str(e)
