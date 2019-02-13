@@ -64,26 +64,28 @@ class BaseStorageBackend(object):
         """
         Returns a list of paths to files referenced in napdr that
         match the given mime type.
-        Returns a dict: full_mime_type -> file_path
+        Returns a list of tuples: (full_mime_type, file_path)
         """
-        r = dict()
+        r = list()
         pattern = re.compile(mime_type)
         for pc in napdr.package_content:
             if pattern.search(pc.get("content-type")) is not None:
-                r[pc.get("content-type")] = os.path.join(wd, pc.get("source"))
+                r.append((pc.get("content-type"),
+                          os.path.join(wd, pc.get("source"))))
         return r
 
     def _get_package_content_not_of_type(self, napdr, wd, mime_type):
         """
         Returns a list of paths to files referenced in napdr that
         not match the given mime type.
-        Returns a dict: full_mime_type -> file_path
+        Returns a list of tuples: (full_mime_type, file_path)
         """
-        r = dict()
+        r = list()
         pattern = re.compile(mime_type)
         for pc in napdr.package_content:
             if pattern.search(pc.get("content-type")) is None:
-                r[pc.get("content-type")] = os.path.join(wd, pc.get("source"))
+                r.append((pc.get("content-type"),
+                          os.path.join(wd, pc.get("source"))))
         return r
 
     def _get_id_triple_from_descriptor_file(self, path):
