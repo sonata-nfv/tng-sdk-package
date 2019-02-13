@@ -857,7 +857,8 @@ class TangoPackager(EtsiPackager):
             # Solution: we store it to a temporary 5GTANGO project
             # only used for the validation step.
             if self.args.skip_validation:
-                LOG.warning("Skipping validation upon user request (--no-validation).")
+                LOG.warning(
+                    "Skipping validation upon user request (--no-validation).")
             else:  # ok, do the validation
                 tmp_project_path = tempfile.mkdtemp()
                 tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
