@@ -151,13 +151,13 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
             napdr, wd, "application/vnd.5gtango.nsd")
         print(files)
         [self.assertIn("5gtango_nsd.yaml", item)
-            for mime, item in files.items()]
+            for (mime, item) in files]
         # ---
         files = tcb._get_package_content_of_type(
             napdr, wd, "application/vnd.*.nsd")
         print(files)
         self.assertEqual(len(files), 3)
-        [self.assertIn("_nsd.yaml", item) for mime, item in files.items()]
+        [self.assertIn("_nsd.yaml", item) for (mime, item) in files]
         # ---
         files = tcb._get_package_content_of_type(
             napdr, wd, "application/vnd.osm*")
@@ -181,7 +181,7 @@ class TngSdkPackageStorageTngCatTest(unittest.TestCase):
             napdr, wd, "application/vnd.*.nsd")
         print(files)
         self.assertEqual(len(files), 7)
-        [self.assertNotIn("_nsd.yaml", item) for mime, item in files.items()]
+        [self.assertNotIn("_nsd.yaml", item) for (mime, item) in files]
 
     def test_mime_to_pltfrm(self):
         self.assertEqual(
