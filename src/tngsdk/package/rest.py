@@ -280,6 +280,8 @@ class Packages(Resource):
             args.no_checksums = app.cliargs.no_checksums
             args.no_autoversion = app.cliargs.skip_autoversion
             args.store_skip = app.cliargs.store_skip
+            args.skip_validation = app.cliargs.skip_validation
+
         # select and instantiate storage backend
         sb = None
         if (not args.store_skip  # from CLI
