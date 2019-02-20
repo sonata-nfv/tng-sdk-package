@@ -119,6 +119,7 @@ class NapdRecord(object):
         self.release_date_time = None
         self.metadata = dict()
         self.package_content = list()
+        self.description = None
         self.__dict__.update(kwargs)
 
     def __repr__(self):
@@ -640,12 +641,11 @@ class TangoPackager(EtsiPackager):
                 data = yaml.load(f)
                 if self.args.offline:
                     LOG.warning("Skipping NAPD validation (--offline)")
-                    return data, path  # skip validation step
-                # validate
-                if validate_yaml_online(data):
-                    return data, path
-                raise NapdNotValidException(
-                    "Validation of {} failed.".format(path))
+                else:
+                    if not validate_yaml_online(data):
+                        raise NapdNotValidException(
+                            "Validation of {} failed.".format(path))
+                return data, path
         except NapdNotValidException as e:
             LOG.error("Validation error: {}".format(e))
             raise e
@@ -745,10 +745,10 @@ class TangoPackager(EtsiPackager):
         # validate
         if self.args.offline:
             LOG.warning("Skipping NAPD validation (--offline)")
-            return  # skip validation step
-        if not validate_yaml_online(data):
-            raise NapdNotValidException(
-                "NAPD validation failed. See logs for details.")
+        else:
+            if not validate_yaml_online(data):
+                raise NapdNotValidException(
+                    "NAPD validation failed. See logs for details.")
         LOG.debug("Writing NAPD to: {}".format(path))
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
@@ -858,7 +858,7 @@ class TangoPackager(EtsiPackager):
             # only used for the validation step.
             if self.args.skip_validation:
                 LOG.warning(
-                    "Skipping validation upon user request (--no-validation).")
+                    "Skipping validation (--skip-validation).")
             else:  # ok, do the validation
                 tmp_project_path = tempfile.mkdtemp()
                 tmp_tpfbe = TangoProjectFilesystemBackend(self.args)
@@ -881,6 +881,7 @@ class TangoPackager(EtsiPackager):
                     napdr, wd, self.args.unpackage)
             except BaseException as e:
                 LOG.error(str(e))
+                LOG.debug("Args: {}".format(self.args))
                 self.error_msg = str(e)
                 napdr.error = str(e)
                 return napdr
@@ -901,7 +902,12 @@ class TangoPackager(EtsiPackager):
                  .format(project_path))
         try:
             # 0. validate project with external validator
-            validate_project_with_external_validator(self.args, project_path)
+            if self.args.skip_validation:
+                LOG.warning(
+                    "Skipping validation (--skip-validation).")
+            else:
+                validate_project_with_external_validator(
+                    self.args, project_path)
             # 1. find and load project descriptor
             if project_path is None or project_path == "None":
                 raise MissingInputException("No project path. Abort.")
