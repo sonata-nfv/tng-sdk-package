@@ -61,7 +61,7 @@ def validate_project_with_external_validator(args, project_path):
     # define arguments for validator
     v_args = v_cli.parse_args([
         # levels -s / -i / -t
-        "-s",  # TODO  change to -i if CNF are supported by validator
+        "-i",
         "--project", project_path,  # path to project
         "--workspace", args.workspace  # workspace path
         ])
