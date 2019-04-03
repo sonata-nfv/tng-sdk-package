@@ -61,7 +61,8 @@ def validate_project_with_external_validator(args, project_path):
     # define arguments for validator
     v_args = v_cli.parse_args([
         # levels -s / -i / -t
-        "-i",
+        "-t",
+        "--debug",  # temporary
         "--project", project_path,  # path to project
         "--workspace", args.workspace  # workspace path
         ])
