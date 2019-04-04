@@ -160,7 +160,10 @@ class TngSdkPackageRestTest(unittest.TestCase):
         rd2 = json.loads(r2.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd2)
         self.assertEqual(rd2.get("status"), "running")
-        time.sleep(10)  # wait a bit so that packager can finalize
+        # wait a bit so that packager can finalize
+        # needs to be much more because the validator seems to be quite
+        # slow from time to time
+        time.sleep(30)
         r2 = self.app.get(
             "/api/v1/packages/status/{}".format(
                 rd.get("package_process_uuid")))
