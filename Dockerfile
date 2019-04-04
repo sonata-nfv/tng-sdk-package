@@ -72,4 +72,4 @@ RUN python setup.py develop
 #
 WORKDIR /tng-sdk-package
 EXPOSE 5099
-CMD ["tng-package","-s", "-v"]
+CMD ["tng-package","-s", "--skip-validation"]
