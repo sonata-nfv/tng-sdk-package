@@ -731,7 +731,15 @@ class TangoPackager(EtsiPackager):
                 .format(self.args.pkg_format))
         if "application/vnd.5gtango.nsd" in types:
             return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.etsi.osm.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.lf.onap.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
         if "application/vnd.5gtango.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.etsi.osm.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.lf.onap.vnfd" in types:
             return "application/vnd.5gtango.package.vnfp"
         if "application/vnd.5gtango.tstd" in types:
             return "application/vnd.5gtango.package.tdp"
