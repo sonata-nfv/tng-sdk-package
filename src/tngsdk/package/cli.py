@@ -224,6 +224,14 @@ def parse_args(input_args=None):
         dest="skip_validation",
         action="store_true")
 
+    parser.add_argument(
+        "--validation_level",
+        help="Set validation level. Possible values: 's' or 'syntax', 'i' or 'integrity', 't' or 'topology' , 'skip'",
+        choices=['s', 'syntax', 'i', 'integrity', 't', 'topology', 'skip'],
+        required=False,
+        default='t',
+        dest="validation_level")
+
     # only needed for validator
     parser.add_argument(
         "-w", "--workspace",
