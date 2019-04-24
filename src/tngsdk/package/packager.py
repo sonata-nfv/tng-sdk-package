@@ -367,6 +367,7 @@ class Packager(object):
                  "hash": file_hash(os.path.join(pp, f.get("path"))),
                  "content-type": f.get("type", "text/plain"),
                  "tags": f.get("tags", list()),
+                 "testing_tags": f.get("testing_tags", list()),
                  "_project_source": f.get("path")
                  }
             napdr.package_content.append(r)
