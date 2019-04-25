@@ -130,8 +130,11 @@ packages_parser.add_argument("validation_level",
                              required=False,
                              default='t',
                              help="""Set validation level.
-                              Possible values: 's' or 'syntax',
-                               'i' or 'integrity', 't' or 'topology' , 'skip'""")
+                              Possible values:
+                               's' or 'syntax',
+                               'i' or 'integrity',
+                               't' or 'topology' ,
+                               'skip'""")
 packages_parser.add_argument("workspace",
                              location="form",
                              help="Workspace (ignored for now)")
