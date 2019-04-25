@@ -58,7 +58,7 @@ def validate_project_with_external_validator(args, project_path):
         return
     # ok! let us valiade ...
     v = Validator()
-    # define validation_level 
+    # define validation_level
     if len(args.validation_level) == 1:
         validation_level = "-"+args.validation_level
     else:

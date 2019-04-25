@@ -226,7 +226,8 @@ def parse_args(input_args=None):
 
     parser.add_argument(
         "--validation_level",
-        help="Set validation level. Possible values: 's' or 'syntax', 'i' or 'integrity', 't' or 'topology' , 'skip'",
+        help="""Set validation level. Possible values: 's' or 'syntax',
+         'i' or 'integrity', 't' or 'topology' , 'skip'""",
         choices=['s', 'syntax', 'i', 'integrity', 't', 'topology', 'skip'],
         required=False,
         default='t',
