@@ -49,6 +49,7 @@ from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
 from tngsdk.package.logger import TangoLogger
+from distutils.version import StrictVersion
 
 
 LOG = TangoLogger.getLogger(__name__)
@@ -86,6 +87,8 @@ class MetadataValidationException(BaseException):
 class ChecksumException(BaseException):
     pass
 
+class InvalidVersionFormat(BaseException):
+    pass
 
 class PkgStatus(object):
     WAITING = "waiting"
@@ -314,7 +317,7 @@ class Packager(object):
         # time.sleep(2)
         return NapdRecord(error="_do_package has to be overwritten")
 
-    def _pack_read_project_descriptor(self, project_path):
+    def _pack_read_project_descriptor(self, project_path, autoversion=False):
         """
         Searches and reads, validates project.y*l for packaging.
         """
@@ -386,6 +389,27 @@ class Packager(object):
         # use original
         return f.get("path")
 
+    def autoversion(self, project_descriptor, project_descriptor_path):
+        package = project_descriptor["package"].copy()
+        project_descriptor = project_descriptor.copy()
+        try:
+            version = StrictVersion(str(package["version"]))
+            if len(version.version) == 3:
+                version.version = (version.version[0:-1] +
+                                   (version.version[-1]+1,))
+            elif len(version.version) == 2:
+                version.version = version.version + (1,)
+            else:
+                raise InvalidVersionFormat()
+            package["version"] = str(version)
+            project_descriptor["package"] = package
+
+            with open(os.path.join(project_descriptor_path,
+                                   "project.yml"), "w") as f:
+                yaml.dump(project_descriptor, f, default_flow_style=False)
+        except Exception as e:
+            LOG.warning("Autoversion failed: {}, {}".format(type(e), e))
+        return project_descriptor
 
 class TestPackager(Packager):
 
@@ -444,7 +468,6 @@ class CsarBasePackager(Packager):
         except BaseException as e:
             LOG.error("Cannot read TOSCA metadata: {}".format(e))
         return [{}]
-
 
 class EtsiPackager(CsarBasePackager):
 
@@ -925,6 +948,9 @@ class TangoPackager(EtsiPackager):
                 project_path)
             if project_descriptor is None:
                 raise MissingMetadataException("No project descriptor found.")
+            if self.args.autoversion:
+                project_descriptor = self.autoversion(project_descriptor,
+                                                      project_path)
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
             napdr.package_type = self._pack_get_package_type(napdr)
