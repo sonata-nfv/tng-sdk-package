@@ -963,8 +963,7 @@ class TangoPackager(EtsiPackager):
             if project_descriptor is None:
                 raise MissingMetadataException("No project descriptor found.")
             if self.args.autoversion:
-                project_descriptor = self.autoversion(project_descriptor,
-                                                      project_path)
+                project_descriptor = self.autoversion(project_descriptor)
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
             napdr.package_type = self._pack_get_package_type(napdr)

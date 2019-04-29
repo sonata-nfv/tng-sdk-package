@@ -143,10 +143,9 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
         project_descriptor_results = [{"package": {"version": "1.0.1"}},
                                       {"package": {"version": "1.0.4"}},
                                       {"package": {"version": "1.5.1"}}]
-        project_descriptor_path = "temp_project.yml"
         for desc, result in zip(project_descriptors,
                                 project_descriptor_results):
-            self.assertEqual(p.autoversion(desc, project_descriptor_path),
+            self.assertEqual(p.autoversion(desc),
                              result)
 
         project_descriptors_invalid = [{"package": {"version": "1"}},
@@ -158,5 +157,5 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
                                        {"package": {"version": ".1.0.2"}}]
 
         for desc in project_descriptors_invalid:
-            project_descriptor = p.autoversion(desc, project_descriptor_path)
+            project_descriptor = p.autoversion(desc)
             self.assertEqual(project_descriptor, desc)
