@@ -87,8 +87,10 @@ class MetadataValidationException(BaseException):
 class ChecksumException(BaseException):
     pass
 
+
 class InvalidVersionFormat(BaseException):
     pass
+
 
 class PkgStatus(object):
     WAITING = "waiting"
@@ -240,6 +242,7 @@ class Packager(object):
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
+        self.version_incremented = False
         LOG.info("Packager created: {}".format(self),
                  extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
@@ -391,7 +394,6 @@ class Packager(object):
 
     def autoversion(self, project_descriptor, project_descriptor_path):
         package = project_descriptor["package"].copy()
-        project_descriptor = project_descriptor.copy()
         try:
             version = StrictVersion(str(package["version"]))
             if len(version.version) == 3:
@@ -403,13 +405,24 @@ class Packager(object):
                 raise InvalidVersionFormat()
             package["version"] = str(version)
             project_descriptor["package"] = package
+            self.version_incremented = True
+        except Exception as e:
+            LOG.warning("Autoversion failed: {}, {}".format(type(e), e))
+            self.version_incremented = False
+        return project_descriptor
 
+    def store_autoversion(self, project_descriptor, project_descriptor_path):
+        try:
             with open(os.path.join(project_descriptor_path,
                                    "project.yml"), "w") as f:
                 yaml.dump(project_descriptor, f, default_flow_style=False)
         except Exception as e:
-            LOG.warning("Autoversion failed: {}, {}".format(type(e), e))
-        return project_descriptor
+            LOG.warning("""Store autoversion failed,
+                but package of new version created: {}, {}""".format(
+                                                type(e), e))
+            return False
+        return True
+
 
 class TestPackager(Packager):
 
@@ -468,6 +481,7 @@ class CsarBasePackager(Packager):
         except BaseException as e:
             LOG.error("Cannot read TOSCA metadata: {}".format(e))
         return [{}]
+
 
 class EtsiPackager(CsarBasePackager):
 
@@ -983,6 +997,8 @@ class TangoPackager(EtsiPackager):
             creat_zip_file_from_directory(napdr._project_wd, path_dest)
             LOG.info("Package created: '{}'"
                      .format(path_dest))
+            self.store_autoversion(project_descriptor,
+                                   project_path)
             # annotate napdr
             napdr.metadata["_storage_location"] = path_dest
             return napdr
