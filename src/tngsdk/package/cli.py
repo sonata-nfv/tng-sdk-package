@@ -209,14 +209,6 @@ def parse_args(input_args=None):
         action="store_true")
 
     parser.add_argument(
-        "--skip-autoversion",
-        help="Auto. increase package version field.",
-        required=False,
-        default=False,
-        dest="skip_autoversion",
-        action="store_true")
-
-    parser.add_argument(
         "--autoversion",
         help="Auto increase of package version field.",
         required=False,
