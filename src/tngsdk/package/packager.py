@@ -320,7 +320,7 @@ class Packager(object):
         # time.sleep(2)
         return NapdRecord(error="_do_package has to be overwritten")
 
-    def _pack_read_project_descriptor(self, project_path, autoversion=False):
+    def _pack_read_project_descriptor(self, project_path):
         """
         Searches and reads, validates project.y*l for packaging.
         """
@@ -392,7 +392,7 @@ class Packager(object):
         # use original
         return f.get("path")
 
-    def autoversion(self, project_descriptor, project_descriptor_path):
+    def autoversion(self, project_descriptor):
         package = project_descriptor["package"].copy()
         try:
             version = StrictVersion(str(package["version"]))
