@@ -134,3 +134,29 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
         p.unpackage(callback_func=cb)
         self.assertTrue(lock.acquire(timeout=3.0),
                         msg="callback was not called before timeout")
+
+    def test_autoversion(self):
+        p = PM.new_packager(self.default_args, pkg_format="test")
+        project_descriptors = [{"package": {"version": "1.0"}},
+                               {"package": {"version": "1.0.3"}},
+                               {"package": {"version": 1.5}}]
+        project_descriptor_results = [{"package": {"version": "1.0.1"}},
+                                      {"package": {"version": "1.0.4"}},
+                                      {"package": {"version": "1.5.1"}}]
+        project_descriptor_path = "temp_project.yml"
+        for desc, result in zip(project_descriptors,
+                                project_descriptor_results):
+            self.assertEqual(p.autoversion(desc, project_descriptor_path),
+                             result)
+
+        project_descriptors_invalid = [{"package": {"version": "1"}},
+                                       {"package": {"version": "1.0.1.9"}},
+                                       {"package": {"version": "1.0"}},
+                                       {"package": {"version": "1."}},
+                                       {"package": {"version": "1.0."}},
+                                       {"package": {"version": "text"}},
+                                       {"package": {"version": ".1.0.2"}}]
+
+        for desc in project_descriptors_invalid:
+            project_descriptor = p.autoversion(desc, project_descriptor_path)
+            self.assertEqual(project_descriptor, desc)
