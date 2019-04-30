@@ -49,7 +49,7 @@ from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
 from tngsdk.package.logger import TangoLogger
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 
 LOG = TangoLogger.getLogger(__name__)
@@ -88,7 +88,7 @@ class ChecksumException(BaseException):
     pass
 
 
-class InvalidVersionFormat(BaseException):
+class InvalidVersionFormat(Exception):
     pass
 
 
@@ -392,29 +392,28 @@ class Packager(object):
         # use original
         return f.get("path")
 
-    def autoversion(self, project_descriptor):
-        package = project_descriptor["package"].copy()
+    def autoversion(self, project_descriptor, index=2):
+        project_descriptor = project_descriptor.copy()
+        project_descriptor["package"] = project_descriptor["package"].copy()
+        version = project_descriptor["package"]["version"]
         try:
-            version = StrictVersion(str(package["version"]))
-            if len(version.version) == 3:
-                version.version = (version.version[0:-1] +
-                                   (version.version[-1]+1,))
-            elif len(version.version) == 2:
-                version.version = version.version + (1,)
-            else:
-                raise InvalidVersionFormat()
-            package["version"] = str(version)
-            project_descriptor["package"] = package
+            version = LooseVersionExtended(version)
+            version.increment(index)
+
+            project_descriptor["package"]["version"] = str(version)
             self.version_incremented = True
         except Exception as e:
             LOG.warning("Autoversion failed: {}, {}".format(type(e), e))
             self.version_incremented = False
         return project_descriptor
 
-    def store_autoversion(self, project_descriptor, project_descriptor_path):
+    def store_autoversion(self, project_descriptor, project_descriptor_path,
+                          project_descriptor_filename="project.yml"):
+        if not self.version_incremented:
+            return False
         try:
             with open(os.path.join(project_descriptor_path,
-                                   "project.yml"), "w") as f:
+                                   project_descriptor_filename), "w") as f:
                 yaml.dump(project_descriptor, f, default_flow_style=False)
         except Exception as e:
             LOG.warning("""Store autoversion failed,
@@ -1212,3 +1211,22 @@ def validate_file_checksum(path, algorithm, hash_str):
             path, h_file, hash_str)
         LOG.error(msg)
         raise ChecksumException(msg)
+
+
+class LooseVersionExtended(LooseVersion):
+
+    def __init__(self, vstring, *args, **kwargs):
+        super().__init__(str(vstring), *args, **kwargs)
+
+    def increment(self, index=-1, to=1):
+        if index > len(self.version)-1:
+            self.version.extend([0]*(index+1-len(self.version)))
+        self.version[index] += to
+        self.vstring = self.__str__()
+
+    def __str__(self):
+        return ".".join(list(map(str, self.version)))
+
+    def parse(self, *args, **kwargs):
+        super().parse(*args, **kwargs)
+        self.version = list(map(int, self.version))
