@@ -49,6 +49,7 @@ from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.helper import dictionary_deep_merge
 from tngsdk.package.logger import TangoLogger
+from distutils.version import StrictVersion
 
 
 LOG = TangoLogger.getLogger(__name__)
@@ -84,6 +85,10 @@ class MetadataValidationException(BaseException):
 
 
 class ChecksumException(BaseException):
+    pass
+
+
+class InvalidVersionFormat(BaseException):
     pass
 
 
@@ -237,6 +242,7 @@ class Packager(object):
         self.error_msg = None
         self.args = args
         self.result = NapdRecord()
+        self.version_incremented = False
         LOG.info("Packager created: {}".format(self),
                  extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
@@ -386,6 +392,37 @@ class Packager(object):
             return os.path.join("Definitions/", f.get("path"))
         # use original
         return f.get("path")
+
+    def autoversion(self, project_descriptor):
+        package = project_descriptor["package"].copy()
+        try:
+            version = StrictVersion(str(package["version"]))
+            if len(version.version) == 3:
+                version.version = (version.version[0:-1] +
+                                   (version.version[-1]+1,))
+            elif len(version.version) == 2:
+                version.version = version.version + (1,)
+            else:
+                raise InvalidVersionFormat()
+            package["version"] = str(version)
+            project_descriptor["package"] = package
+            self.version_incremented = True
+        except Exception as e:
+            LOG.warning("Autoversion failed: {}, {}".format(type(e), e))
+            self.version_incremented = False
+        return project_descriptor
+
+    def store_autoversion(self, project_descriptor, project_descriptor_path):
+        try:
+            with open(os.path.join(project_descriptor_path,
+                                   "project.yml"), "w") as f:
+                yaml.dump(project_descriptor, f, default_flow_style=False)
+        except Exception as e:
+            LOG.warning("""Store autoversion failed,
+                but package of new version created: {}, {}""".format(
+                                                type(e), e))
+            return False
+        return True
 
 
 class TestPackager(Packager):
@@ -926,6 +963,8 @@ class TangoPackager(EtsiPackager):
                 project_path)
             if project_descriptor is None:
                 raise MissingMetadataException("No project descriptor found.")
+            if self.args.autoversion:
+                project_descriptor = self.autoversion(project_descriptor)
             # 2. create a NAPDR for the new package
             napdr = self._pack_create_napdr(project_path, project_descriptor)
             napdr.package_type = self._pack_get_package_type(napdr)
@@ -958,6 +997,8 @@ class TangoPackager(EtsiPackager):
             creat_zip_file_from_directory(napdr._project_wd, path_dest)
             LOG.info("Package created: '{}'"
                      .format(path_dest))
+            self.store_autoversion(project_descriptor,
+                                   project_path)
             # annotate napdr
             napdr.metadata["_storage_location"] = path_dest
             return napdr
