@@ -33,9 +33,11 @@
 import unittest
 import tempfile
 import os
+import yaml
 from tngsdk.package.cli import parse_args
-from tngsdk.package.packager import PM
+from tngsdk.package.packager import PM, LooseVersionExtended
 from tngsdk.package.tests.fixtures import misc_file
+from shutil import copytree
 
 
 TOSCA_META = """TOSCA-Meta-Version: 1.0
@@ -493,6 +495,59 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
                     wd, "TOSCA-Metadata/TOSCA.meta")))
         # check *.tgo file
         self.assertTrue(os.path.exists(self.default_args.output))
+
+    def test_do_package_good_project_with_autoversion(self):
+        self.default_args = parse_args([])
+        tmpdir = tempfile.mkdtemp()
+        tmp_project = os.path.join(tmpdir, "5gtango_ns_project_example1")
+        tmp_project = copytree(misc_file("5gtango_ns_project_example1"),
+                                         tmp_project)
+        self.default_args.package = tmp_project
+        self.default_args.output = os.path.join(tmpdir, "test.tgo")
+        self.default_args.autoversion = True
+        with open(os.path.join(self.default_args.package,
+                               "project.yml"), "r") as f:
+            old_diction = yaml.load(f)
+        old_version = LooseVersionExtended(old_diction["package"]["version"])
+        p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
+        r = p._do_package()
+        autoversioned = p.autoversion(old_diction)
+        self.assertIsNone(r.error)
+        # check structure of wd
+        wd = r._project_wd
+        self.assertTrue(os.path.exists(wd))
+        self.assertTrue(os.path.exists(
+            os.path.join(wd, "TOSCA-Metadata")))
+        self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, "TOSCA-Metadata/NAPD.yaml")))
+        with open(os.path.join(wd, "TOSCA-Metadata/NAPD.yaml")) as f:
+            new_diction = yaml.load(f)
+        self.assertTrue(LooseVersionExtended(new_diction["version"]) >
+                        old_version)
+        self.assertEqual(new_diction["version"],
+                         autoversioned["package"]["version"])
+
+        self.assertTrue(os.path.exists(
+                os.path.join(
+                    wd, "etsi_manifest.mf")))
+
+        with open(os.path.join(wd, "etsi_manifest.mf"), "r") as f:
+            new_diction = yaml.load(f)
+        self.assertTrue(LooseVersionExtended(
+            new_diction["ns_package_version"]) > old_version)
+        self.assertEqual(new_diction["ns_package_version"],
+                         autoversioned["package"]["version"])
+
+        # check *.tgo file
+        self.assertTrue(os.path.exists(self.default_args.output))
+
+        with open(os.path.join(self.default_args.package,
+                               "project.yml"), "r") as f:
+            new_project_descriptor = yaml.load(f)
+        self.assertEqual(new_project_descriptor, autoversioned)
+        self.assertTrue(LooseVersionExtended(
+            new_project_descriptor["package"]["version"]) > old_version)
 
 
 class TngSdkPackageTangoPackagerEndToEndTest(unittest.TestCase):
