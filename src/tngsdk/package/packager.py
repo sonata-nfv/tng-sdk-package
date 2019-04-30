@@ -393,6 +393,12 @@ class Packager(object):
         return f.get("path")
 
     def autoversion(self, project_descriptor, index=2):
+        """
+        Increases project_descriptor["package"]["version"], on digit, 
+        specified by index. Returns new project_descriptor. If succeful,
+        self.version_incremented is set to True (for store_autoversion()).
+        Used in TangoPackager._do_package().
+        """
         project_descriptor = project_descriptor.copy()
         project_descriptor["package"] = project_descriptor["package"].copy()
         version = project_descriptor["package"]["version"]
@@ -409,6 +415,10 @@ class Packager(object):
 
     def store_autoversion(self, project_descriptor, project_descriptor_path,
                           project_descriptor_filename="project.yml"):
+        """
+        Stores given project_descriptor to project_descriptor_path, if
+        self.version_incremented is True.
+        """
         if not self.version_incremented:
             return False
         try:
@@ -1214,7 +1224,11 @@ def validate_file_checksum(path, algorithm, hash_str):
 
 
 class LooseVersionExtended(LooseVersion):
-
+    """
+    Parsing helper for Packager.autoversion.
+    Docstrings and source code of super class:
+    https://hg.python.org/cpython/file/tip/Lib/distutils/version.py
+    """
     def __init__(self, vstring, *args, **kwargs):
         super().__init__(str(vstring), *args, **kwargs)
 
