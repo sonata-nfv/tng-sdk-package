@@ -997,8 +997,9 @@ class TangoPackager(EtsiPackager):
             creat_zip_file_from_directory(napdr._project_wd, path_dest)
             LOG.info("Package created: '{}'"
                      .format(path_dest))
-            self.store_autoversion(project_descriptor,
-                                   project_path)
+            if self.args.autoversion:
+                self.store_autoversion(project_descriptor,
+                                       project_path)
             # annotate napdr
             napdr.metadata["_storage_location"] = path_dest
             return napdr
