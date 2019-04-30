@@ -394,7 +394,7 @@ class Packager(object):
 
     def autoversion(self, project_descriptor, index=2):
         """
-        Increases project_descriptor["package"]["version"], on digit, 
+        Increases project_descriptor["package"]["version"], on digit,
         specified by index. Returns new project_descriptor. If succeful,
         self.version_incremented is set to True (for store_autoversion()).
         Used in TangoPackager._do_package().

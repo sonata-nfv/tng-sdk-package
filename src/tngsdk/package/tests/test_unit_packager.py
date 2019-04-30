@@ -165,7 +165,6 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
             project_descriptor = p.autoversion(desc)
             self.assertEqual(project_descriptor, desc)  # no changes if failed
             self.assertFalse(p.version_incremented, msg=str(desc))
-            #Flag not set
 
     def test_store_autoversion(self):
         # Set up test

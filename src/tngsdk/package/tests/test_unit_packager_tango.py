@@ -502,7 +502,7 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         tmp_project = os.path.join(tmpdir, "5gtango_ns_project_example1")
         tmp_project = copytree(misc_file("5gtango_ns_project_example1"),
-                                         tmp_project)
+                               tmp_project)
         self.default_args.package = tmp_project
         self.default_args.output = os.path.join(tmpdir, "test.tgo")
         self.default_args.autoversion = True
