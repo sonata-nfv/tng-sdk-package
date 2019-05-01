@@ -497,11 +497,12 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.default_args.output))
 
     def test_do_package_good_project_with_autoversion(self):
+        #  set up test
         self.default_args = parse_args([])
         tmpdir = tempfile.mkdtemp()
         tmp_project = os.path.join(tmpdir, "5gtango_ns_project_example1")
         tmp_project = copytree(misc_file("5gtango_ns_project_example1"),
-                                         tmp_project)
+                               tmp_project)
         self.default_args.package = tmp_project
         self.default_args.output = os.path.join(tmpdir, "test.tgo")
         self.default_args.autoversion = True
@@ -518,6 +519,7 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.assertTrue(os.path.exists(wd))
         self.assertTrue(os.path.exists(
             os.path.join(wd, "TOSCA-Metadata")))
+        # check NAPD.yaml
         self.assertTrue(os.path.exists(
                 os.path.join(
                     wd, "TOSCA-Metadata/NAPD.yaml")))
@@ -528,6 +530,7 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         self.assertEqual(new_diction["version"],
                          autoversioned["package"]["version"])
 
+        # check etsi
         self.assertTrue(os.path.exists(
                 os.path.join(
                     wd, "etsi_manifest.mf")))
@@ -542,6 +545,7 @@ class TngSdkPackageTangoPackagerRealTgoTest(unittest.TestCase):
         # check *.tgo file
         self.assertTrue(os.path.exists(self.default_args.output))
 
+        # check source file
         with open(os.path.join(self.default_args.package,
                                "project.yml"), "r") as f:
             new_project_descriptor = yaml.load(f)
