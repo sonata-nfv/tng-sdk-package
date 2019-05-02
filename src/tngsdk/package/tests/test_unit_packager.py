@@ -33,8 +33,10 @@
 
 import unittest
 import threading
+import yaml
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM, parse_block_based_meta_file
+from tempfile import NamedTemporaryFile
 
 
 class TngSdkPackagePackagerHelperTest(unittest.TestCase):
@@ -139,23 +141,58 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
         p = PM.new_packager(self.default_args, pkg_format="test")
         project_descriptors = [{"package": {"version": "1.0"}},
                                {"package": {"version": "1.0.3"}},
-                               {"package": {"version": 1.5}}]
+                               {"package": {"version": 1.5}},
+                               {"package": {"version": "1"}},
+                               {"package": {"version": 1}},
+                               {"package": {"version": "."}}]
         project_descriptor_results = [{"package": {"version": "1.0.1"}},
                                       {"package": {"version": "1.0.4"}},
-                                      {"package": {"version": "1.5.1"}}]
+                                      {"package": {"version": "1.5.1"}},
+                                      {"package": {"version": "1.0.1"}},
+                                      {"package": {"version": "1.0.1"}},
+                                      {"package": {"version": "0.0.1"}}]
         for desc, result in zip(project_descriptors,
                                 project_descriptor_results):
-            self.assertEqual(p.autoversion(desc),
-                             result)
+            self.assertEqual(p.autoversion(desc), result)  # incremented?
+            self.assertTrue(p.version_incremented,
+                            msg=str(desc)+", "+str(result))
+            # Flag set?
 
-        project_descriptors_invalid = [{"package": {"version": "1"}},
-                                       {"package": {"version": "1.0.1.9"}},
-                                       {"package": {"version": "1.0"}},
-                                       {"package": {"version": "1."}},
-                                       {"package": {"version": "1.0."}},
-                                       {"package": {"version": "text"}},
-                                       {"package": {"version": ".1.0.2"}}]
+        project_descriptors_invalid = [{"package": {"version": ""}},
+                                       {"package": {"version": "text"}}]
 
         for desc in project_descriptors_invalid:
             project_descriptor = p.autoversion(desc)
-            self.assertEqual(project_descriptor, desc)
+            self.assertEqual(project_descriptor, desc)  # no changes if failed
+            self.assertFalse(p.version_incremented, msg=str(desc))
+
+    def test_store_autoversion(self):
+        # Set up test
+        tmp = NamedTemporaryFile()
+        project_descriptor_path = ""
+        project_descriptor_filename = tmp.name
+        test_dict = {"test": "test"}
+        f = open(project_descriptor_filename, "w")
+        yaml.dump(test_dict, f, default_flow_style=False)
+        f.close()
+
+        p = PM.new_packager(self.default_args, pkg_format="test")
+        project_descriptor = {"package": {"version": "1.0.1"}}
+
+        # store to fail
+        self.assertFalse(p.store_autoversion(project_descriptor,
+                                             project_descriptor_path))
+        f = open(project_descriptor_filename, "r")
+        result = yaml.load(f)
+        f.close()
+        self.assertEqual(result, test_dict)
+
+        # succeful store
+        p.version_incremented = True
+        self.assertTrue(p.store_autoversion(project_descriptor,
+                                            project_descriptor_path,
+                                            project_descriptor_filename))
+        f = open(project_descriptor_filename, "r")
+        result = yaml.load(f)
+        f.close()
+        self.assertEqual(result, project_descriptor)
