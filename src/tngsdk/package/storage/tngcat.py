@@ -215,7 +215,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
         for pc in napdr.package_content:
             triple = self._get_id_triple_from_descriptor_file(
-                os.path.join(wd, pc.get("source")))
+                os.path.join(wd, pc.get("source")), pc.get("content-type"))
             if triple is not None:
                 # annotate
                 pc["id"] = triple
