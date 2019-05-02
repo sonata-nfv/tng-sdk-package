@@ -88,24 +88,44 @@ class BaseStorageBackend(object):
                           os.path.join(wd, pc.get("source"))))
         return r
 
-    def _get_id_triple_from_descriptor_file(self, path):
+    def _get_id_triple_from_descriptor_file(self, path,
+                                            content_type="5gtango"):
         """
         gets vendor, name, version from YAML descriptor
         returns dict
         """
         # 5gtango
-        try:
-            res = dict()
-            with open(path, 'r') as f:
-                data = yaml.load(f)
-                res["vendor"] = data["vendor"]
-                res["name"] = data["name"]
-                res["version"] = data["version"]
-            return res
-        except BaseException as e:
-            del e
-        # TODO OSM
+        if "5gtango" in content_type:
+            try:
+                res = dict()
+                with open(path, 'r') as f:
+                    data = yaml.load(f)
+                    res["vendor"] = data["vendor"]
+                    res["name"] = data["name"]
+                    res["version"] = data["version"]
+                return res
+            except BaseException:
+                LOG.warning("Coul not find vendor.name.version in {}"
+                            .format(path))
+        elif "osm" in content_type:
+            # OSM
+            try:
+                res = dict()
+                with open(path, 'r') as f:
+                    data = yaml.load(f)
+                    # remove two first levels of OSM descriptor
+                    data = data[list(data.keys())[0]]
+                    data = data[list(data.keys())[0]]
+                    data = data[0]
+                    res["vendor"] = data["vendor"]
+                    res["name"] = data["name"]
+                    res["version"] = data["version"]
+                return res
+            except BaseException:
+                LOG.warning("Coul not find vendor.name.version in {}"
+                            .format(path))
         # TODO ONAP
+        LOG.warning("Fallback: Using filename as ID.")
         return None
 
     def store(self, napdr, wd, pkg_file):
