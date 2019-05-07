@@ -56,6 +56,13 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             "tng-prj-be: Initialized TangoProjectFilesystemBackend({})"
             .format(self.args.output))
 
+    def remove_Definitions(self, s):
+        s = s.strip().strip(os.sep)
+        s = s.split(os.sep)
+        if "Definitions" in s:
+            s.remove("Definitions")
+        return os.path.join(*s)
+
     def _makedirs(self, d):
         if not os.path.exists(d):
             os.makedirs(d)
@@ -69,7 +76,6 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         self._makedirs(os.path.join(pd, "sources"))
         self._makedirs(os.path.join(pd, "dependencies"))
         self._makedirs(os.path.join(pd, "deployment"))
-        self._makedirs(os.path.join(pd, "sources"))
 
     def _create_project_manifest(self, napdr):
         """
@@ -96,8 +102,7 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             del tmp["algorithm"]
             del tmp["hash"]
             # re-write path (source -> path)
-            tmp["path"] = os.path.join(
-                BASE_ARTIFACT_DIR, tmp["source"])
+            tmp["path"] = os.path.join(self.remove_Definitions(tmp["source"]))
             del tmp["source"]
             # re-write content type (content-type -> type)
             tmp["type"] = tmp["content-type"]
@@ -112,8 +117,7 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         """
         for pc in napdr.package_content:
             s = os.path.join(wd, pc.get("source"))
-            d = os.path.join(
-                os.path.join(pd, BASE_ARTIFACT_DIR), pc.get("source"))
+            d = os.path.join(pd, self.remove_Definitions(pc.get("source")))
             # ensure dirs exist
             self._makedirs(os.path.dirname(d))
             LOG.debug("Copying {}\n\t to {}".format(s, d))

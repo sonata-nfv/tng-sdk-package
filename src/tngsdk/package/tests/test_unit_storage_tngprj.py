@@ -83,8 +83,66 @@ class TngSdkPackageStorageTngPrjTest(unittest.TestCase):
             os.path.join(sl, "sources/")))
         self.assertTrue(os.path.exists(
             os.path.join(
-                sl, "sources/Definitions/sources/nsd/nsd-sample.yml")))
+                sl, "sources/nsd/nsd-sample.yml")))
         self.assertTrue(os.path.exists(
             os.path.join(
-                sl, "sources/Definitions/sources/vnfd/vnfd-sample.yml")))
+                sl, "sources/vnfd/vnfd-sample.yml")))
+        shutil.rmtree(pd)
+
+    def test_store2(self):
+        self.default_args = parse_args(["-o", tempfile.mkdtemp()])
+        self.default_args.unpackage = misc_file(
+            "eu.5gtango.idempotency_test.0.1.tgo")
+        self.p = PM.new_packager(
+            self.default_args,
+            pkg_format="eu.5gtango",
+            storage_backend=None
+        )
+        tpb = TangoProjectFilesystemBackend(self.default_args)
+
+        napdr = self.p._do_unpackage()
+        wd = napdr.metadata.get("_napd_path").replace(
+            "/TOSCA-Metadata/NAPD.yaml", "")
+        # call store using active working dir
+        new_napdr = tpb.store(
+            napdr, wd, self.default_args.unpackage)
+        # check result
+        self.assertIsNotNone(new_napdr.metadata.get("_storage_location"))
+        sl = new_napdr.metadata.get("_storage_location")
+        # check created project
+        pd = self.default_args.output
+        self.assertTrue(os.path.exists(pd))
+        self.assertTrue(os.path.exists(
+            os.path.join(pd, "eu.5gtango.idempotency_test.0.1/project.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "project.yml")))
+        # files in root dir
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "vnfd-a10-3.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "vnfd-nginx-3.yml")))
+        # files in sources/
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "sources/")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "sources/vnfd-a10-4.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "sources/vnfd-nginx-4.yml")))
+        # files in sources/[...]/
+        self.assertTrue(os.path.exists(
+            os.path.join(
+                sl, "sources/nsd/nsd.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(
+                sl, "sources/vnfd/vnfd-a10.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(
+                sl, "sources/vnfd/vnfd-nginx.yml")))
+        # files in other folders of root dir
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "Definitions/")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "Definitions/vnfd-a10-2.yml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(sl, "Definitions/vnfd-nginx-2.yml")))
         shutil.rmtree(pd)
