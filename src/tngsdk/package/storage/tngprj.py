@@ -95,6 +95,8 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             },
             "files": []
         }
+        self.sources = []
+        self.destinations = []
         # add entries for artifacts
         for pc in napdr.package_content:
             tmp = pc.copy()
@@ -103,6 +105,8 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             del tmp["hash"]
             # re-write path (source -> path)
             tmp["path"] = os.path.join(self.remove_Definitions(tmp["source"]))
+            self.sources.append(tmp["source"])
+            self.destinations.append(tmp["path"])
             del tmp["source"]
             # re-write content type (content-type -> type)
             tmp["type"] = tmp["content-type"]
@@ -115,10 +119,9 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         """
         Copies all unpackaged artifacts to project directory.
         """
-        for pc in napdr.package_content:
-            s = os.path.join(wd, pc.get("source"))
-            d = os.path.join(pd, self.remove_Definitions(pc.get("source")))
-            # ensure dirs exist
+        for src, dst in zip(self.sources, self.destinations):
+            s = os.path.join(wd, src)
+            d = os.path.join(pd, dst)
             self._makedirs(os.path.dirname(d))
             LOG.debug("Copying {}\n\t to {}".format(s, d))
             shutil.copyfile(s, d)
