@@ -32,6 +32,7 @@
 
 import logging
 import os
+import sys
 from tngsdk.package import rest, cli
 from tngsdk.package.logger import TangoLogger
 
@@ -77,6 +78,11 @@ def run(args=None):
     Can get a list of args that are then
     used as input for the CLI arg parser.
     """
+    if sys.version_info[0] < 3:
+        print("tng-pkg can only run on Python3!")
+        print("But you are using Python{}".format(sys.version_info[0]))
+        print("Abort.")
+        sys.exit(1)
     args = cli.parse_args(args)
     setup_logging(args)
 
