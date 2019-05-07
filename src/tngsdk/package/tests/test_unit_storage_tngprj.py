@@ -89,7 +89,7 @@ class TngSdkPackageStorageTngPrjTest(unittest.TestCase):
                 sl, "sources/vnfd/vnfd-sample.yml")))
         shutil.rmtree(pd)
 
-    def test_store2(self):
+    def test_store_idempotent(self):
         self.default_args = parse_args(["-o", tempfile.mkdtemp()])
         self.default_args.unpackage = misc_file(
             "eu.5gtango.idempotency_test.0.1.tgo")
