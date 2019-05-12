@@ -284,14 +284,14 @@ class Packages(Resource):
         # pass CLI args to REST args
         args.offline = False
         args.no_checksums = False
-        args.no_autoversion = False
+        args.autoversion = False
         args.store_skip = False
         if app.cliargs is not None:
             args.output = None
             args.workspace = None
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
-            args.no_autoversion = app.cliargs.skip_autoversion
+            args.autoversion = app.cliargs.autoversion
             args.store_skip = app.cliargs.store_skip
             args.skip_validation = app.cliargs.skip_validation
 
@@ -383,11 +383,11 @@ class Project(Resource):
         args.workspace = None
         args.offline = False
         args.no_checksums = False
-        args.no_autoversion = False
+        args.autoversion = False
         if app.cliargs is not None:
             args.offline = app.cliargs.offline
             args.no_checksums = app.cliargs.no_checksums
-            args.no_autoversion = app.cliargs.no_autoversion
+            args.autoversion = app.cliargs.autoversion
         p = PM.new_packager(args)
         p.package(callback_func=on_packaging_done)
         LOG.info("POST to /projects done.",
