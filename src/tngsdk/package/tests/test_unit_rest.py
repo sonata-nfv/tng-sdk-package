@@ -38,6 +38,8 @@ from mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
 from tngsdk.package.packager import PM
+from tngsdk.package.tests.fixtures import misc_file
+from werkzeug.datastructures import FileStorage
 
 
 class MockArgs(object):
@@ -91,13 +93,15 @@ class TngSdkPackageRestTest(unittest.TestCase):
 
     def test_project_v1_endpoint(self):
         # do a malformed post
+        f = open(misc_file("5gtango_ns_a10_nginx_example.tgo"), "rb")
+        project = FileStorage(f)
         r = self.app.post("/api/v1/projects",
                           content_type="multipart/form-data",
-                          data={"project": (None,  # TODO upload real project
-                                            "5gtango-ns-project-example.zip"),
+                          data={"project": project,
                                 "callback_url": "https://test.local:8000/cb",
                                 "skip_store": True})
-        self.assertEqual(r.status_code, 501)
+        self.assertEqual(r.status_code, 500)
+        f.close()
 
     def test_package_v1_endpoint(self):
         # do a malformed post
@@ -179,7 +183,10 @@ class TngSdkPackageRestTest(unittest.TestCase):
     def test_on_packaging_done(self):
         args = MockArgs()
         p = PM.new_packager(args)
-        s = on_packaging_done(p)
+        p.result.metadata["_storage_location"] = "testdir/test.tgo"
+        print(p.__dict__)
+        with app.test_request_context():
+            s = on_packaging_done(p)
         self.assertEqual(s, 200)
 
     def test_on_unpackaging_done(self):
