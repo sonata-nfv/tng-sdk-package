@@ -34,18 +34,21 @@ import time
 import json
 import tempfile
 import subprocess
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, send_from_directory, url_for
 from flask_restplus import Resource, Api, Namespace
 from flask_restplus import fields, inputs
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
-from tngsdk.package.packager import PM
+from tngsdk.package.packager import PM, extract_zip_file_to_temp
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
 from tngsdk.package.logger import TangoLogger
+
+
+PACKAGES_SUBDIR = "packages"
 
 
 LOG = TangoLogger.getLogger(__name__)
@@ -115,7 +118,8 @@ packages_parser.add_argument("skip_store",
                              type=inputs.boolean,
                              required=False,
                              default=False,
-                             help="Skip catalog upload of contents (optional)")
+                             help="""Skip catalog upload
+                                    of contents (optional)""")
 packages_parser.add_argument("skip_validation",
                              location="form",
                              type=inputs.boolean,
@@ -169,17 +173,61 @@ projects_parser.add_argument("project",
                              type=FileStorage,
                              required=True,
                              help="Uploaded project archive")
-packages_parser.add_argument("callback_url",
+projects_parser.add_argument("callback_url",
+                             location="form",
+                             required=False,
+                             help="URL called after unpackaging (optional)",
+                             store_missing=True,
+                             default=None)
+projects_parser.add_argument("username",
                              location="form",
                              required=False,
                              default=None,
-                             help="URL called after unpackaging (optional)")
-packages_parser.add_argument("format",
+                             help="Username of the uploader (optional)",
+                             store_missing=True)
+projects_parser.add_argument("format",
+                             dest="pkg_format",
                              location="form",
                              required=False,
-                             default="eu.5gtango",
-                             help="Package format (optional)")
-
+                             default=None,
+                             help="Package format (optional)",
+                             store_missing=True)
+projects_parser.add_argument("skip_store",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=None,
+                             help="""Skip catalog upload
+                                    of contents (optional)""",
+                             store_missing=True)
+projects_parser.add_argument("skip_validation",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=None,
+                             help="Skip service validation (optional)",
+                             store_missing=True)
+projects_parser.add_argument("validation_level",
+                             location="form",
+                             type=str,
+                             choices=['s', 'syntax', 'i', 'integrity',
+                                      't', 'topology', 'skip'],
+                             required=False,
+                             default=None,
+                             help="""Set validation level.
+                              Possible values:
+                               's' or 'syntax',
+                               'i' or 'integrity',
+                               't' or 'topology' ,
+                               'skip'""",
+                             store_missing=True)
+projects_parser.add_argument("output",
+                             type=str,
+                             location="form",
+                             required=False,
+                             help="Output",
+                             default=None,
+                             store_missing=True)
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
     "alive_since": fields.String(
@@ -241,14 +289,38 @@ def on_packaging_done(packager):
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
+
     if c_url is None:
         LOG.warning("'callback_url' is None. Skipping callback.")
         return
     LOG.info("Callback: POST to '{}'".format(c_url))
     # perform callback request
-    r_code = _do_callback_request(c_url, {})
+    pl = packaging_done_answer(packager)
+    r_code = _do_callback_request(c_url, pl)
     LOG.info("DONE: Status {}".format(r_code))
     return r_code
+
+
+def packaging_done_answer(packager):
+    """
+    Constitutes an answer dictionary.
+    Args:
+        packager:
+
+    Returns: dictionary
+
+    """
+    package_location = packager.result.metadata.get("_storage_location")
+    pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
+          "package_location": package_location,
+          "package_metadata": packager.result.to_dict(),
+          "package_process_status": str(packager.status),
+          "package_process_uuid": str(packager.uuid),
+          "package_download_link": (
+              url_for("api.v1_project_download",
+                      filename=os.path.basename(package_location),
+                      _external=True))}
+    return pl
 
 
 def _write_to_temp_file(package_data):
@@ -366,33 +438,65 @@ class PackagesStatusList(Resource):
 
 
 @api_v1.route("/projects")
-class Project(Resource):
+class Projects(Resource):
     """
     Endpoint for package creation.
     """
+    def get(self):
+        packages = os.listdir(PACKAGES_SUBDIR)
+        return [{"package_name": name,
+                 "package_download_link": url_for("api.v1_project_download",
+                                                  filename=name,
+                                                  _external=True)}
+                for name in packages]
+
     @api_v1.expect(projects_parser)
+    @api_v1.response(200, "Successfully started packaging.")
+    @api_v1.response(400, "Bad project: Could not package given project.")
     def post(self):
         LOG.warning("endpoint not implemented yet")
         args = projects_parser.parse_args()
         LOG.info("POST to /projects w. args: {}".format(args),
                  extra={"start_stop": "START"})
-        args.package = None  # fill with path to uploaded project
-        args.unpackage = None
+        tempproject_path = _write_to_temp_file(args.project)
+        tempproject_path = extract_zip_file_to_temp(tempproject_path)
+        args.package = (
+            os.path.join(tempproject_path,
+                         os.path.splitext(args.project.filename)[0]))
+        args.package = os.path.split(args.package)[0]
+
         # pass CLI args to REST args
-        args.output = None
-        args.workspace = None
-        args.offline = False
-        args.no_checksums = False
-        args.autoversion = False
+        if not os.path.exists(PACKAGES_SUBDIR):
+            os.makedirs(PACKAGES_SUBDIR)
+
         if app.cliargs is not None:
-            args.offline = app.cliargs.offline
-            args.no_checksums = app.cliargs.no_checksums
-            args.autoversion = app.cliargs.autoversion
+            cliargs = vars(app.cliargs)
+            for key in cliargs:
+                if key not in args or args[key] is None:
+                    args[key] = cliargs[key]
+        if args.output is None:
+            args.output = PACKAGES_SUBDIR
+        else:
+            args.output = os.path.join(PACKAGES_SUBDIR, args.output)
         p = PM.new_packager(args)
         p.package(callback_func=on_packaging_done)
         LOG.info("POST to /projects done.",
                  extra={"start_stop": "START", "status": 501})
-        return "not implemented", 501
+        return {"package_process_uuid": str(p.uuid),
+                "status": p.status,
+                "error_msg": p.error_msg}
+
+
+@api_v1.route("/projects/<string:filename>")
+class Project_download(Resource):
+    """
+    Endpoint for package creation.
+    """
+    @api_v1.expect(projects_parser)
+    def get(self, filename):
+        return send_from_directory(
+            os.path.join(os.getcwd(), PACKAGES_SUBDIR),
+            filename, as_attachment=True)
 
 
 @api_v1.route("/pings")
