@@ -3,11 +3,16 @@ files:
 - path: sources/vnfd/vnfd-sample.yml
   tags:
   - eu.5gtango
+  testing_tags:
+  - some.test.tag
+  - some.other.test.tag
   type: application/vnd.5gtango.vnfd
 - path: sources/nsd/nsd-sample.yml
   tags:
   - eu.5gtango
   type: application/vnd.5gtango.nsd
+  testing_tags:
+  - some.test.tag
 package:
   description: Some description about this sample
   maintainer: Name, Company, Contact

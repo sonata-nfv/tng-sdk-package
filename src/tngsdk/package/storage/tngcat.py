@@ -91,7 +91,8 @@ class TangoCatalogBackend(BaseStorageBackend):
         if self.args.username is not None:
             params["username"] = self.args.username
         if arg_params is not None:
-            params.update(params)
+            params.update(arg_params)
+        LOG.debug("Build request params: {}".format(params))
         return params
 
     def _post_yaml_data_to_catalog(self, endpoint, data, arg_params=None):
@@ -214,7 +215,7 @@ class TangoCatalogBackend(BaseStorageBackend):
         """
         for pc in napdr.package_content:
             triple = self._get_id_triple_from_descriptor_file(
-                os.path.join(wd, pc.get("source")))
+                os.path.join(wd, pc.get("source")), pc.get("content-type"))
             if triple is not None:
                 # annotate
                 pc["id"] = triple
