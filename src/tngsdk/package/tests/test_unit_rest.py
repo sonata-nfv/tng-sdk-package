@@ -102,7 +102,8 @@ class TngSdkPackageRestTest(unittest.TestCase):
                                 "skip_store": True})
         self.assertEqual(r.status_code, 500)
         # do a acceptable post
-        f = open(misc_file("5gtango_ns_a10_nginx_zipped_project_example.tgo"), "rb")
+        f = open(misc_file("5gtango_ns_a10_nginx_zipped_project_example.tgo"),
+                 "rb")
         project = FileStorage(f)
         r = self.app.post("/api/v1/projects",
                           content_type="multipart/form-data",
