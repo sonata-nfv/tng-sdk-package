@@ -97,34 +97,40 @@ packages_parser.add_argument("callback_url",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="URL called after unpackaging (optional)")
 packages_parser.add_argument("username",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="Username of the uploader (optional)")
 packages_parser.add_argument("layer",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="Layer tag to be unpackaged (optional)")
 packages_parser.add_argument("format",
                              location="form",
                              required=False,
-                             default="eu.5gtango",
+                             default=None,
+                             store_missing=True,
                              help="Package format (optional)")
 packages_parser.add_argument("skip_store",
                              location="form",
                              type=inputs.boolean,
                              required=False,
-                             default=False,
+                             default=None,
+                             store_missing=True,
                              help="""Skip catalog upload
                                     of contents (optional)""")
 packages_parser.add_argument("skip_validation",
                              location="form",
                              type=inputs.boolean,
                              required=False,
-                             default=False,
+                             default=None,
+                             store_missing=True,
                              help="Skip service validation (optional)")
 packages_parser.add_argument("validation_level",
                              location="form",
@@ -132,7 +138,8 @@ packages_parser.add_argument("validation_level",
                              choices=['s', 'syntax', 'i', 'integrity',
                                       't', 'topology', 'skip'],
                              required=False,
-                             default='t',
+                             default=None,
+                             store_missing=True,
                              help="""Set validation level.
                               Possible values:
                                's' or 'syntax',
@@ -141,10 +148,26 @@ packages_parser.add_argument("validation_level",
                                'skip'""")
 packages_parser.add_argument("workspace",
                              location="form",
+                             store_missing=True,
+                             default=None,
                              help="Workspace (ignored for now)")
 packages_parser.add_argument("output",
                              location="form",
+                             store_missing=True,
+                             default=None,
                              help="Output (ignored for now)")
+packages_parser.add_argument("offline",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Offline")
+packages_parser.add_argument("no_checksums",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Do not validate artifact checksums.")
 
 packages_status_item_get_return_model = api_v1.model(
     "PackagesStatusItemGetReturn",
@@ -228,6 +251,25 @@ projects_parser.add_argument("output",
                              help="Output",
                              default=None,
                              store_missing=True)
+projects_parser.add_argument("workspace",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Workspace (ignored for now)")
+projects_parser.add_argument("offline",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Offline")
+projects_parser.add_argument("no_checksums",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Do not validate artifact checksums.")
+
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
     "alive_since": fields.String(
@@ -354,18 +396,11 @@ class Packages(Resource):
         args.package = None
         args.unpackage = temppkg_path
         # pass CLI args to REST args
-        args.offline = False
-        args.no_checksums = False
-        args.autoversion = False
-        args.store_skip = False
         if app.cliargs is not None:
-            args.output = None
-            args.workspace = None
-            args.offline = app.cliargs.offline
-            args.no_checksums = app.cliargs.no_checksums
-            args.autoversion = app.cliargs.autoversion
-            args.store_skip = app.cliargs.store_skip
-            args.skip_validation = app.cliargs.skip_validation
+            cliargs = vars(app.cliargs)
+            for cliarg in cliargs:
+                if cliarg not in args or args[cliarg] is None:
+                    args[cliarg] = cliargs[cliarg]
 
         # select and instantiate storage backend
         sb = None
@@ -443,6 +478,12 @@ class Projects(Resource):
     Endpoint for package creation.
     """
     def get(self):
+        """
+        Get a list created packages.
+        Returns: List of dictionaries: [{'package_name: <name>,
+                                        'package_download_link': <link>}, ..]
+
+        """
         packages = os.listdir(PACKAGES_SUBDIR)
         return [{"package_name": name,
                  "package_download_link": url_for("api.v1_project_download",
@@ -464,6 +505,7 @@ class Projects(Resource):
             os.path.join(tempproject_path,
                          os.path.splitext(args.project.filename)[0]))
         args.package = os.path.split(args.package)[0]
+        args.unpackage = None
 
         # pass CLI args to REST args
         if not os.path.exists(PACKAGES_SUBDIR):
@@ -490,7 +532,7 @@ class Projects(Resource):
 @api_v1.route("/projects/<string:filename>")
 class Project_download(Resource):
     """
-    Endpoint for package creation.
+    Endpoint for download created package.
     """
     @api_v1.expect(projects_parser)
     def get(self, filename):
