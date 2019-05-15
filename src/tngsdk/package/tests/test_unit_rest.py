@@ -38,6 +38,7 @@ from mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
 from tngsdk.package.packager import PM
+from tngsdk.package.cli import parse_args
 from tngsdk.package.tests.fixtures import misc_file
 from werkzeug.datastructures import FileStorage
 
@@ -85,7 +86,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.patcher.start()
         # configure flask
         app.config['TESTING'] = True
-        app.cliargs = None
+        app.cliargs = parse_args([])
         self.app = app.test_client()
 
     def tearDown(self):
@@ -93,14 +94,22 @@ class TngSdkPackageRestTest(unittest.TestCase):
 
     def test_project_v1_endpoint(self):
         # do a malformed post
-        f = open(misc_file("5gtango_ns_a10_nginx_example.tgo"), "rb")
+        r = self.app.post("/api/v1/projects",
+                          content_type="multipart/form-data",
+                          data={"project": (None,
+                                            "5gtango-ns-project-example.zip"),
+                                "callback_url": "https://test.local:8000/cb",
+                                "skip_store": True})
+        self.assertEqual(r.status_code, 500)
+        # do a acceptable post
+        f = open(misc_file("5gtango_ns_a10_nginx_zipped_project_example.tgo"), "rb")
         project = FileStorage(f)
         r = self.app.post("/api/v1/projects",
                           content_type="multipart/form-data",
                           data={"project": project,
                                 "callback_url": "https://test.local:8000/cb",
                                 "skip_store": True})
-        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.status_code, 200)
         f.close()
 
     def test_package_v1_endpoint(self):
