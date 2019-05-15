@@ -112,6 +112,20 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         f.close()
 
+    def test_project_project_download_v1_get_endpoints(self):
+        r = self.app.get("api/v1/projects")
+        self.assertEqual(r.status_code, 200)
+        r = json.loads(r.get_data(as_text=True))
+        self.assertIsInstance(r, list)
+        self.assertIsInstance(r[0], dict)
+        self.assertIn("package_name", r[0])
+        self.assertIn("package_download_link", r[0])
+        r = self.app.get(r[0]["package_download_link"])
+        self.assertEqual(r.status_code, 200)
+        r = r.response
+        r = FileStorage(r)
+        self.assertIsInstance(r, FileStorage)
+
     def test_package_v1_endpoint(self):
         # do a malformed post
         r = self.app.post("/api/v1/packages")
