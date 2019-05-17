@@ -221,7 +221,7 @@ projects_parser.add_argument("skip_store",
                              required=False,
                              default=None,
                              help="""Skip catalog upload
-                                    of contents (optional)""",
+                                    of contents (ignored)""",
                              store_missing=True)
 projects_parser.add_argument("skip_validation",
                              location="form",
