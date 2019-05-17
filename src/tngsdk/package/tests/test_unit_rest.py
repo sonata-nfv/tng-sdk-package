@@ -131,7 +131,6 @@ class TngSdkPackageRestTest(unittest.TestCase):
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
 
-
     def test_project_v1_endpoint(self):
         # do a malformed post
         r = self.app.post("/api/v1/projects",
