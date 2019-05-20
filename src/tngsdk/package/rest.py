@@ -34,18 +34,21 @@ import time
 import json
 import tempfile
 import subprocess
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, send_from_directory, url_for
 from flask_restplus import Resource, Api, Namespace
 from flask_restplus import fields, inputs
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
-from tngsdk.package.packager import PM
+from tngsdk.package.packager import PM, extract_zip_file_to_temp
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
 from tngsdk.package.logger import TangoLogger
+
+
+PACKAGES_SUBDIR = "packages"
 
 
 LOG = TangoLogger.getLogger(__name__)
@@ -94,33 +97,40 @@ packages_parser.add_argument("callback_url",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="URL called after unpackaging (optional)")
 packages_parser.add_argument("username",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="Username of the uploader (optional)")
 packages_parser.add_argument("layer",
                              location="form",
                              required=False,
                              default=None,
+                             store_missing=True,
                              help="Layer tag to be unpackaged (optional)")
 packages_parser.add_argument("format",
                              location="form",
                              required=False,
-                             default="eu.5gtango",
+                             default=None,
+                             store_missing=True,
                              help="Package format (optional)")
 packages_parser.add_argument("skip_store",
                              location="form",
                              type=inputs.boolean,
                              required=False,
-                             default=False,
-                             help="Skip catalog upload of contents (optional)")
+                             default=None,
+                             store_missing=True,
+                             help="""Skip catalog upload
+                                    of contents (optional)""")
 packages_parser.add_argument("skip_validation",
                              location="form",
                              type=inputs.boolean,
                              required=False,
-                             default=False,
+                             default=None,
+                             store_missing=True,
                              help="Skip service validation (optional)")
 packages_parser.add_argument("validation_level",
                              location="form",
@@ -128,7 +138,8 @@ packages_parser.add_argument("validation_level",
                              choices=['s', 'syntax', 'i', 'integrity',
                                       't', 'topology', 'skip'],
                              required=False,
-                             default='t',
+                             default=None,
+                             store_missing=True,
                              help="""Set validation level.
                               Possible values:
                                's' or 'syntax',
@@ -137,10 +148,26 @@ packages_parser.add_argument("validation_level",
                                'skip'""")
 packages_parser.add_argument("workspace",
                              location="form",
+                             store_missing=True,
+                             default=None,
                              help="Workspace (ignored for now)")
 packages_parser.add_argument("output",
                              location="form",
+                             store_missing=True,
+                             default=None,
                              help="Output (ignored for now)")
+packages_parser.add_argument("offline",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Offline")
+packages_parser.add_argument("no_checksums",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Do not validate artifact checksums.")
 
 packages_status_item_get_return_model = api_v1.model(
     "PackagesStatusItemGetReturn",
@@ -169,16 +196,79 @@ projects_parser.add_argument("project",
                              type=FileStorage,
                              required=True,
                              help="Uploaded project archive")
-packages_parser.add_argument("callback_url",
+projects_parser.add_argument("callback_url",
+                             location="form",
+                             required=False,
+                             help="URL called after unpackaging (optional)",
+                             store_missing=True,
+                             default=None)
+projects_parser.add_argument("username",
                              location="form",
                              required=False,
                              default=None,
-                             help="URL called after unpackaging (optional)")
-packages_parser.add_argument("format",
+                             help="Username of the uploader (optional)",
+                             store_missing=True)
+projects_parser.add_argument("format",
+                             dest="pkg_format",
                              location="form",
                              required=False,
-                             default="eu.5gtango",
-                             help="Package format (optional)")
+                             default=None,
+                             help="Package format (optional)",
+                             store_missing=True)
+projects_parser.add_argument("skip_store",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=None,
+                             help="""Skip catalog upload
+                                    of contents (ignored)""",
+                             store_missing=True)
+projects_parser.add_argument("skip_validation",
+                             location="form",
+                             type=inputs.boolean,
+                             required=False,
+                             default=None,
+                             help="Skip service validation (optional)",
+                             store_missing=True)
+projects_parser.add_argument("validation_level",
+                             location="form",
+                             type=str,
+                             choices=['s', 'syntax', 'i', 'integrity',
+                                      't', 'topology', 'skip'],
+                             required=False,
+                             default=None,
+                             help="""Set validation level.
+                              Possible values:
+                               's' or 'syntax',
+                               'i' or 'integrity',
+                               't' or 'topology' ,
+                               'skip'""",
+                             store_missing=True)
+projects_parser.add_argument("output",
+                             type=str,
+                             location="form",
+                             required=False,
+                             help="Output",
+                             default=None,
+                             store_missing=True)
+projects_parser.add_argument("workspace",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Workspace (ignored for now)")
+projects_parser.add_argument("offline",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Offline")
+projects_parser.add_argument("no_checksums",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             location="form",
+                             help="Do not validate artifact checksums.")
 
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
@@ -241,14 +331,38 @@ def on_packaging_done(packager):
     if packager.args is None or "callback_url" not in packager.args:
         return
     c_url = packager.args.get("callback_url")
+
     if c_url is None:
         LOG.warning("'callback_url' is None. Skipping callback.")
         return
     LOG.info("Callback: POST to '{}'".format(c_url))
     # perform callback request
-    r_code = _do_callback_request(c_url, {})
+    pl = packaging_done_answer(packager)
+    r_code = _do_callback_request(c_url, pl)
     LOG.info("DONE: Status {}".format(r_code))
     return r_code
+
+
+def packaging_done_answer(packager):
+    """
+    Constitutes an answer dictionary.
+    Args:
+        packager:
+
+    Returns: dictionary
+
+    """
+    package_location = packager.result.metadata.get("_storage_location")
+    pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
+          "package_location": package_location,
+          "package_metadata": packager.result.to_dict(),
+          "package_process_status": str(packager.status),
+          "package_process_uuid": str(packager.uuid),
+          "package_download_link": (
+              url_for("api.v1_project_download",
+                      filename=os.path.basename(package_location),
+                      _external=True))}
+    return pl
 
 
 def _write_to_temp_file(package_data):
@@ -282,18 +396,11 @@ class Packages(Resource):
         args.package = None
         args.unpackage = temppkg_path
         # pass CLI args to REST args
-        args.offline = False
-        args.no_checksums = False
-        args.autoversion = False
-        args.store_skip = False
         if app.cliargs is not None:
-            args.output = None
-            args.workspace = None
-            args.offline = app.cliargs.offline
-            args.no_checksums = app.cliargs.no_checksums
-            args.autoversion = app.cliargs.autoversion
-            args.store_skip = app.cliargs.store_skip
-            args.skip_validation = app.cliargs.skip_validation
+            cliargs = vars(app.cliargs)
+            for cliarg in cliargs:
+                if cliarg not in args or args[cliarg] is None:
+                    args[cliarg] = cliargs[cliarg]
 
         # select and instantiate storage backend
         sb = None
@@ -366,33 +473,72 @@ class PackagesStatusList(Resource):
 
 
 @api_v1.route("/projects")
-class Project(Resource):
+class Projects(Resource):
     """
     Endpoint for package creation.
     """
+    def get(self):
+        """
+        Get a list created packages.
+        Returns: List of dictionaries: [{'package_name: <name>,
+                                        'package_download_link': <link>}, ..]
+
+        """
+        packages = os.listdir(PACKAGES_SUBDIR)
+        return [{"package_name": name,
+                 "package_download_link": url_for("api.v1_project_download",
+                                                  filename=name,
+                                                  _external=True)}
+                for name in packages]
+
     @api_v1.expect(projects_parser)
+    @api_v1.response(200, "Successfully started packaging.")
+    @api_v1.response(400, "Bad project: Could not package given project.")
     def post(self):
         LOG.warning("endpoint not implemented yet")
         args = projects_parser.parse_args()
         LOG.info("POST to /projects w. args: {}".format(args),
                  extra={"start_stop": "START"})
-        args.package = None  # fill with path to uploaded project
+        tempproject_path = _write_to_temp_file(args.project)
+        tempproject_path = extract_zip_file_to_temp(tempproject_path)
+        args.package = (
+            os.path.join(tempproject_path,
+                         os.path.splitext(args.project.filename)[0]))
+        args.package = os.path.split(args.package)[0]
         args.unpackage = None
+
         # pass CLI args to REST args
-        args.output = None
-        args.workspace = None
-        args.offline = False
-        args.no_checksums = False
-        args.autoversion = False
+        if not os.path.exists(PACKAGES_SUBDIR):
+            os.makedirs(PACKAGES_SUBDIR)
+
         if app.cliargs is not None:
-            args.offline = app.cliargs.offline
-            args.no_checksums = app.cliargs.no_checksums
-            args.autoversion = app.cliargs.autoversion
+            cliargs = vars(app.cliargs)
+            for key in cliargs:
+                if key not in args or args[key] is None:
+                    args[key] = cliargs[key]
+        if args.output is None:
+            args.output = PACKAGES_SUBDIR
+        else:
+            args.output = os.path.join(PACKAGES_SUBDIR, args.output)
         p = PM.new_packager(args)
         p.package(callback_func=on_packaging_done)
         LOG.info("POST to /projects done.",
                  extra={"start_stop": "START", "status": 501})
-        return "not implemented", 501
+        return {"package_process_uuid": str(p.uuid),
+                "status": p.status,
+                "error_msg": p.error_msg}
+
+
+@api_v1.route("/projects/<string:filename>")
+class Project_download(Resource):
+    """
+    Endpoint for download created package.
+    """
+    @api_v1.expect(projects_parser)
+    def get(self, filename):
+        return send_from_directory(
+            os.path.join(os.getcwd(), PACKAGES_SUBDIR),
+            filename, as_attachment=True)
 
 
 @api_v1.route("/pings")

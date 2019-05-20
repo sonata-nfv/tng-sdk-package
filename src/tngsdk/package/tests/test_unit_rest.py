@@ -34,10 +34,15 @@
 import unittest
 import json
 import time
+import tempfile
+import os
 from mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
 from tngsdk.package.packager import PM
+from tngsdk.package.cli import parse_args
+from tngsdk.package.tests.fixtures import misc_file
+from werkzeug.datastructures import FileStorage
 
 
 class MockArgs(object):
@@ -83,21 +88,86 @@ class TngSdkPackageRestTest(unittest.TestCase):
         self.patcher.start()
         # configure flask
         app.config['TESTING'] = True
-        app.cliargs = None
+        app.cliargs = parse_args([])
         self.app = app.test_client()
 
     def tearDown(self):
         self.patcher.stop()
 
+    def test_project_package_project(self):
+        # create package
+        f = open(misc_file(
+            "5gtango_ns_a10_nginx_zipped_project_example.zip"), "rb")
+        project = FileStorage(f)
+        r = self.app.post("/api/v1/projects",
+                          content_type="multipart/form-data",
+                          data={"project": project,
+                                "callback_url": "https://test.local:8000/cb",
+                                "skip_store": True})
+        self.assertEqual(r.status_code, 200)
+        f.close()
+        # download created package
+        r = self.app.get("api/v1/projects")
+        self.assertEqual(r.status_code, 200)
+        r = json.loads(r.get_data(as_text=True))
+        self.assertIsInstance(r, list)
+        self.assertIsInstance(r[0], dict)
+        self.assertIn("package_name", r[0])
+        self.assertIn("package_download_link", r[0])
+        r = self.app.get(r[0]["package_download_link"])
+        self.assertEqual(r.status_code, 200)
+        data = r.get_data()
+        tmp = tempfile.mkdtemp()
+        filename = "name.tgo"
+        path = os.path.join(tmp, filename)
+        with open(path, "wb") as f:
+            f.write(data)
+        # do a post with a real package and callback_url
+        r = self.app.post("/api/v1/packages",
+                          content_type="multipart/form-data",
+                          data={"package": open(path, "rb"),
+                                "skip_store": True})
+        self.assertEqual(r.status_code, 200)
+        rd = json.loads(r.get_data(as_text=True))
+        self.assertIn("package_process_uuid", rd)
+
     def test_project_v1_endpoint(self):
         # do a malformed post
         r = self.app.post("/api/v1/projects",
                           content_type="multipart/form-data",
-                          data={"project": (None,  # TODO upload real project
+                          data={"project": (None,
                                             "5gtango-ns-project-example.zip"),
                                 "callback_url": "https://test.local:8000/cb",
                                 "skip_store": True})
-        self.assertEqual(r.status_code, 501)
+        self.assertEqual(r.status_code, 500)
+        # do a acceptable post
+        f = open(misc_file(
+            "5gtango_ns_a10_nginx_zipped_project_example.zip"), "rb")
+        project = FileStorage(f)
+        r = self.app.post("/api/v1/projects",
+                          content_type="multipart/form-data",
+                          data={"project": project,
+                                "callback_url": "https://test.local:8000/cb",
+                                "skip_store": True})
+        self.assertEqual(r.status_code, 200)
+        f.close()
+
+    def test_project_project_download_v1_get_endpoints(self):
+        r = self.app.get("api/v1/projects")
+        self.assertEqual(r.status_code, 200)
+        r = json.loads(r.get_data(as_text=True))
+        self.assertIsInstance(r, list)
+        self.assertIsInstance(r[0], dict)
+        self.assertIn("package_name", r[0])
+        self.assertIn("package_download_link", r[0])
+        r = self.app.get(r[0]["package_download_link"])
+        self.assertEqual(r.status_code, 200)
+        data = r.get_data()
+        tmp = tempfile.mkdtemp()
+        filename = "name.tgo"
+        path = os.path.join(tmp, filename)
+        with open(path, "wb") as f:
+            f.write(data)
 
     def test_package_v1_endpoint(self):
         # do a malformed post
@@ -120,7 +190,7 @@ class TngSdkPackageRestTest(unittest.TestCase):
                               open("misc/5gtango-ns-package-example.tgo",
                                    "rb"), "5gtango-ns-package-example.tgo"),
                                 "callback_url": "https://test.local:8000/cb",
-                                "skip_store": True})  # skip store step in test
+                                "skip_store": True})  # skip store in test
         self.assertEqual(r.status_code, 200)
         rd = json.loads(r.get_data(as_text=True))
         self.assertIn("package_process_uuid", rd)
@@ -179,7 +249,10 @@ class TngSdkPackageRestTest(unittest.TestCase):
     def test_on_packaging_done(self):
         args = MockArgs()
         p = PM.new_packager(args)
-        s = on_packaging_done(p)
+        p.result.metadata["_storage_location"] = "testdir/test.tgo"
+        print(p.__dict__)
+        with app.test_request_context():
+            s = on_packaging_done(p)
         self.assertEqual(s, 200)
 
     def test_on_unpackaging_done(self):
