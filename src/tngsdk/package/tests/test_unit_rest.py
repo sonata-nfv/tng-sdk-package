@@ -250,7 +250,6 @@ class TngSdkPackageRestTest(unittest.TestCase):
         args = MockArgs()
         p = PM.new_packager(args)
         p.result.metadata["_storage_location"] = "testdir/test.tgo"
-        print(p.__dict__)
         with app.test_request_context():
             s = on_packaging_done(p)
         self.assertEqual(s, 200)
