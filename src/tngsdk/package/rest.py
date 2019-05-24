@@ -353,15 +353,14 @@ def packaging_done_answer(packager):
 
     """
     package_location = packager.result.metadata.get("_storage_location")
+    package_download_link = ("/api/v1/projects/" +
+                             os.path.basename(package_location))
     pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
           "package_location": package_location,
           "package_metadata": packager.result.to_dict(),
           "package_process_status": str(packager.status),
           "package_process_uuid": str(packager.uuid),
-          "package_download_link": (
-              url_for("api.v1_project_download",
-                      filename=os.path.basename(package_location),
-                      _external=True))}
+          "package_download_link": package_download_link}
     return pl
 
 
@@ -495,7 +494,6 @@ class Projects(Resource):
     @api_v1.response(200, "Successfully started packaging.")
     @api_v1.response(400, "Bad project: Could not package given project.")
     def post(self):
-        LOG.warning("endpoint not implemented yet")
         args = projects_parser.parse_args()
         LOG.info("POST to /projects w. args: {}".format(args),
                  extra={"start_stop": "START"})
