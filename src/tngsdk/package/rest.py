@@ -82,8 +82,6 @@ def serve_forever(args, debug=True):
     """
     # TODO replace this with WSGIServer for better performance
     app.cliargs = args
-    app.config['SERVER_NAME'] = ':'.join([app.cliargs.service_address,
-                                          str(app.cliargs.service_port)])
     app.run(host=args.service_address,
             port=args.service_port,
             debug=debug)
@@ -355,12 +353,8 @@ def packaging_done_answer(packager):
 
     """
     package_location = packager.result.metadata.get("_storage_location")
-    package_download_link = None
-    with app.app_context():
-        package_download_link = (
-            url_for("api.v1_project_download",
-                    filename=os.path.basename(package_location),
-                    _external=True))
+    package_download_link = ("/api/v1/projects/" +
+                             os.path.basename(package_location))
     pl = {"package_id": packager.result.metadata.get("_storage_uuid"),
           "package_location": package_location,
           "package_metadata": packager.result.to_dict(),
