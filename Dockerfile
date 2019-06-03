@@ -47,9 +47,34 @@ ENV LOGLEVEL INFO
 ENV LOGJSON True
 
 # Install basics
-RUN apt-get update && apt-get install -y git  # We net git to install other tng-* tools.
-RUN pip install flake8
+RUN apt-get update && apt-get install -y git wget  # We net git to install other tng-* tools.
+RUN pip install flake8 pyaml
 
+# Pre-fetch latest tng-schemas (so that container works w/o internet connection)
+RUN mkdir /root/.tng-schema
+RUN mkdir /root/.tng-schema/service-descriptor/
+WORKDIR /root/.tng-schema/service-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/service-descriptor/nsd-schema.yml
+RUN mkdir /root/.tng-schema/function-descriptor/
+WORKDIR /root/.tng-schema/function-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/function-descriptor/vnfd-schema.yml
+RUN mkdir /root/.tng-schema/test-descriptor/
+WORKDIR /root/.tng-schema/test-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/test-descriptor/test-descriptor-schema.yml -O test-schema.yml
+RUN mkdir /root/.tng-schema/policy-descriptor/
+WORKDIR /root/.tng-schema/policy-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/policy-descriptor/policy-schema.yml
+RUN mkdir /root/.tng-schema/sla-template-descriptor/
+WORKDIR /root/.tng-schema/sla-template-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/sla-template-descriptor/sla-template-schema.yml
+RUN mkdir /root/.tng-schema/slice-descriptor/
+WORKDIR /root/.tng-schema/slice-descriptor/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/slice-descriptor/nst-schema.yml -O nstd-schema.yml
+RUN mkdir /root/.tng-schema/package-specification/
+WORKDIR /root/.tng-schema/package-specification/
+RUN wget https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/package-specification/napd-schema.yml
+
+WORKDIR /
 # Install other 5GTAGNO SDK components
 # - tng-sdk-project (required by validator)
 RUN pip install git+https://github.com/sonata-nfv/tng-sdk-project.git
@@ -62,7 +87,6 @@ RUN tng-sdk-validate -h
 #
 # Installation (packager)
 #
-WORKDIR /
 ADD . /tng-sdk-package
 WORKDIR /tng-sdk-package
 RUN python setup.py develop
