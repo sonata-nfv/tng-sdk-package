@@ -518,7 +518,7 @@ class Projects(Resource):
             args.output = PACKAGES_SUBDIR
         else:
             args.output = os.path.join(PACKAGES_SUBDIR, args.output)
-        p = PM.new_packager(args)
+        p = PM.new_packager(args, pkg_format=args.pkg_format)
         p.package(callback_func=on_packaging_done)
         LOG.info("POST to /projects done.",
                  extra={"start_stop": "START", "status": 501})
