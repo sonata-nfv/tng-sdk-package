@@ -44,6 +44,7 @@ import datetime
 import pprint
 import pyrfc3339
 import hashlib
+import tarfile
 from tngsdk.package.validator import validate_yaml_online
 from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
@@ -199,6 +200,8 @@ class PackagerManager(object):
             packager_cls = TangoPackager
         elif pkg_format == "eu.etsi":
             packager_cls = EtsiPackager
+        elif pkg_format == "eu.etsi.osm":
+            packager_cls = OsmPackager
         elif pkg_format == "test":
             packager_cls = TestPackager
         # check if we have a packager for the given format or abort
@@ -243,6 +246,7 @@ class Packager(object):
         self.args = args
         self.result = NapdRecord()
         self.version_incremented = False
+        self.checksum_algorithm = "SHA-256"
         LOG.info("Packager created: {}".format(self),
                  extra={"start_stop": "START"})
         LOG.debug("Packager args: {}".format(self.args))
@@ -320,6 +324,32 @@ class Packager(object):
         # time.sleep(2)
         return NapdRecord(error="_do_package has to be overwritten")
 
+    def _pack_get_package_type(self, napdr):
+        """
+        Guess package type based on contents.
+        if NSD exists -> application/vnd.5gtango.package.nsp
+        if VNF exists -> application/vnd.5gtango.package.vnfp
+        if TSTD exists -> application/vnd.5gtango.package.tdp
+        else -> error
+        """
+        types = [pc.get("content-type") for pc in napdr.package_content]
+        if "application/vnd.5gtango.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.etsi.osm.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.lf.onap.nsd" in types:
+            return "application/vnd.5gtango.package.nsp"
+        if "application/vnd.5gtango.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.etsi.osm.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.lf.onap.vnfd" in types:
+            return "application/vnd.5gtango.package.vnfp"
+        if "application/vnd.5gtango.tstd" in types:
+            return "application/vnd.5gtango.package.tdp"
+        raise BaseException("Could not detect package type!"
+                            + " No NSD, VNFD or TSTD found.")
+
     def _pack_read_project_descriptor(self, project_path):
         """
         Searches and reads, validates project.y*l for packaging.
@@ -369,15 +399,19 @@ class Packager(object):
         # add package content
         for f in pd.get("files"):
             r = {"source": self._pack_package_source_path(f),
-                 "algorithm": "SHA-256",
-                 "hash": file_hash(os.path.join(pp, f.get("path"))),
+                 "algorithm": self.checksum_algorithm,
+                 "hash": self.file_hash(os.path.join(pp, f.get("path"))),
                  "content-type": f.get("type", "text/plain"),
                  "tags": f.get("tags", list()),
                  "testing_tags": f.get("testing_tags", list()),
-                 "_project_source": f.get("path")
+                 "_project_source": f.get("path"),
+                 "filename": os.path.basename(f.get("path"))
                  }
             napdr.package_content.append(r)
         return napdr
+
+    def file_hash(self, *args, **kwargs):
+        return file_hash(*args, **kwargs)
 
     def _pack_package_source_path(self, f):
         """
@@ -763,36 +797,6 @@ class TangoPackager(EtsiPackager):
             LOG.debug("Copying {}\n\t to {}".format(s, d))
             shutil.copyfile(s, d)
 
-    def _pack_get_package_type(self, napdr):
-        """
-        Guess package type based on contents.
-        if NSD exists -> application/vnd.5gtango.package.nsp
-        if VNF exists -> application/vnd.5gtango.package.vnfp
-        if TSTD exists -> application/vnd.5gtango.package.tdp
-        else -> error
-        """
-        types = [pc.get("content-type") for pc in napdr.package_content]
-        if self.args.pkg_format != "eu.5gtango":
-            raise BaseException(
-                "Package format: {} not supported (eu.5gtango only)."
-                .format(self.args.pkg_format))
-        if "application/vnd.5gtango.nsd" in types:
-            return "application/vnd.5gtango.package.nsp"
-        if "application/vnd.etsi.osm.nsd" in types:
-            return "application/vnd.5gtango.package.nsp"
-        if "application/vnd.lf.onap.nsd" in types:
-            return "application/vnd.5gtango.package.nsp"
-        if "application/vnd.5gtango.vnfd" in types:
-            return "application/vnd.5gtango.package.vnfp"
-        if "application/vnd.etsi.osm.vnfd" in types:
-            return "application/vnd.5gtango.package.vnfp"
-        if "application/vnd.lf.onap.vnfd" in types:
-            return "application/vnd.5gtango.package.vnfp"
-        if "application/vnd.5gtango.tstd" in types:
-            return "application/vnd.5gtango.package.tdp"
-        raise BaseException("Could not detect package type!"
-                            + " No NSD, VNFD or TSTD found.")
-
     def _pack_write_napd(self, napdr, name="TOSCA-Metadata/NAPD.yaml"):
         wd = napdr._project_wd
         data = napdr.to_clean_dict()
@@ -1017,6 +1021,189 @@ class TangoPackager(EtsiPackager):
             self.error_msg = str(e)
             return NapdRecord(error=str(e))
 
+
+class OsmPackager(EtsiPackager):
+    folders_nsd = ["ns_config", "vnf_config", "icons", "scripts"]
+    folders_vnf = ["charms", "cloud_init", "icons", "images", "scripts"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.checksum_algorithm = "MD5"
+
+    def file_hash(self, *args, **kwargs):
+        return file_hash(h_func=hashlib.md5, *args, **kwargs)
+
+    def store_checksums(self, path, files):
+        lines  = ["{} {}\n".format(file["hash"], file["filename"])
+                  for file in files]
+        with open(os.path.join(path, "checksums.txt"), "a") as f:
+            f.writelines(lines)
+
+    def _pack_package_source_path(self, f):
+        filename = os.path.basename(f.get("path"))
+        ret = self.choose_folder(
+            {"content-type": f.get("type", "text/plain"),
+             "tags": f.get("tags", list()),
+             "filename": filename})
+        return os.path.join(ret, filename)
+
+    def create_temp_dir(self, subdir_name=None, descriptor=None, hash=None,
+                        folders=folders_vnf):
+        temp = tempfile.mkdtemp()
+        if not subdir_name is None:
+            _makedirs(os.path.join(temp, subdir_name))
+            temp = os.path.join(temp, subdir_name)
+        for folder in folders:
+            _makedirs(os.path.join(temp, folder))
+        if not descriptor is None:
+            shutil.copy(os.path.join(self.args.package, descriptor), temp)
+        if not hash is None:
+            with open(os.path.join(temp, "checksums.txt"), "w") as f:
+                f.writelines(["{} {}\n".format(hash, descriptor)])
+        return temp
+
+    def _sort_files(self, napdr):
+        self.nsd = None
+        self.vnfds = []
+
+        self.general_files = []
+        self.ns_files = []
+        self.vnf_files = []
+        self.unique_files = {}
+        for file in napdr.package_content:
+            if "osm.nsd" in file["content-type"]:
+                self.nsd = file
+            elif "osm.vnfd" in file["content-type"]:
+                self.vnfds.append(file)
+            else:
+                tags = map(lambda tag: tag.split("."), file["tags"])
+                for tag in tags:
+                    if tag[-1] == "osm":
+                        self.general_files.append(file)
+                    elif tag[-2:] == ["osm", "ns"]:
+                        self.ns_files.append((file))
+                    elif tag[-2:] == ["osm", "vnf"]:
+                        self.vnf_files.append(file)
+                    elif tag[-2:-1] == ["osm", "vnf"]:
+                        self.unique_files[tag[-1]] = file
+            #with tarfile.open(archive_path, "w:gz") as f:
+             #   f.add(temp)
+
+    def create_temp_dirs(self, project_name):
+        self.ns_temp_dir = self.create_temp_dir(
+            "_".join([project_name,
+                      os.path.splitext(self.nsd["filename"])[0]]),
+            os.path.join(self.nsd["_project_source"]), self.nsd["hash"],
+            OsmPackager.folders_nsd)
+        self.vnf_temp_dirs = {}
+        for vnfd in self.vnfds:
+            package_name = "_".join([project_name,
+                                     os.path.splitext(vnfd["filename"])[0]])
+            self.vnf_temp_dirs[package_name] = (
+                self.create_temp_dir(package_name, vnfd["_project_source"],
+                                     vnfd["hash"]))
+
+    def attach_files(self):
+        for file in self.general_files+self.ns_files:
+            shutil.copy(os.path.join(self.args.package,
+                                     file["_project_source"]),
+                        os.path.join(self.ns_temp_dir,
+                                     self.choose_folder(file)))
+        self.store_checksums(self.ns_temp_dir,
+                             self.general_files+self.ns_files)
+        for path in self.vnf_temp_dirs.values():
+            for file in self.general_files+self.vnf_files:
+                shutil.copy(os.path.join(self.args.package,
+                                     file["_project_source"]),
+                            os.path.join(path, self.choose_folder(file)))
+            self.store_checksums(path, self.general_files+self.vnf_files)
+        for package_name, file in self.unique_files.items():
+            shutil.copy(os.path.join(self.args.package,
+                                     file["_project_source"]),
+                        os.path.join(self.vnf_temp_dirs[package_name],
+                                     self.choose_folder(file)))
+            self.store_checksums(self.vnf_temp_dirs[package_name], [file])
+
+    def create_packages(self, wd):
+        package_name = os.path.basename(self.ns_temp_dir.strip(os.sep))
+        package_path = os.path.join(wd, "{}.tar.gz".format(package_name))
+        with tarfile.open(package_path, "w:gz") as f:
+            f.add(self.ns_temp_dir, arcname=package_name)
+        for package_name, path in self.vnf_temp_dirs.items():
+            package_path = os.path.join(wd, "{}.tar.gz".format(package_name))
+            with tarfile.open(package_path, "w:gz") as f:
+                f.add(path, arcname=package_name)
+
+    def choose_folder(self, file):
+        _type = file["content-type"]
+        tags = file["tags"]
+        if "image" in _type or "icons" in tags:
+            return "icons"
+        elif "scripts" in _type:
+            return "scripts"
+        elif "cloud_init" in file["filename"] or "cloud_init" in tags:
+            return "cloud_init"
+        elif "ns_config" in tags:
+            return "ns_config"
+        elif "vnf_config" in tags:
+            return "vnf_config"
+        elif "image" in tags:
+            return "images"
+        elif "charm" in tags:
+            return "charms"
+        return ""
+
+    def _do_package(self):
+        if self.args is not None:
+            project_path = self.args.package
+        else:
+            LOG.error("No project path. Abort.")
+            return NapdRecord()
+        LOG.info("Creating 5GTANGO package using project: '{}'"
+                 .format(project_path))
+        try:
+            # 0. validate project with external validator
+            if (self.args.skip_validation or
+                    self.args.validation_level == "skip"):
+                LOG.warning(
+                    "Skipping validation (--skip-validation).")
+            else:
+                validate_project_with_external_validator(
+                    self.args, project_path)
+            # 1. find and load project descriptor
+            if project_path is None or project_path == "None":
+                raise MissingInputException("No project path. Abort.")
+            project_descriptor = self._pack_read_project_descriptor(
+                project_path)
+            if project_descriptor is None:
+                raise MissingMetadataException("No project descriptor found.")
+            if self.args.autoversion:
+                project_descriptor = self.autoversion(project_descriptor)
+            # 2. create a NAPDR for the new package
+            napdr = self._pack_create_napdr(project_path, project_descriptor)
+            napdr.package_type = self._pack_get_package_type(napdr)
+            LOG.debug("Generated NAPDR: {}".format(napdr))
+            # 3. create a temporary working directory
+            wd = self.args.output
+            if wd is None:
+                wd = "{}.{}.{}".format(napdr.vendor,
+                                       napdr.name,
+                                       napdr.version)
+            if not os.path.exists(wd):
+                os.makedirs(wd)
+            napdr._project_wd = wd
+            LOG.debug("Created working directory: {}"
+                      .format(napdr._project_wd))
+            self._sort_files(napdr) # assign files to objects
+            self.create_temp_dirs(wd) # creating directories done by packager
+            self.attach_files() # copy files
+            self.create_packages(wd)
+            return napdr
+        except BaseException as e:
+            LOG.error(str(e), str(type(e)))
+            self.error_msg = str(e)
+            return NapdRecord(error=str(e))
+
 # #########################
 # Helpers
 # #########################
@@ -1223,6 +1410,12 @@ def validate_file_checksum(path, algorithm, hash_str):
             path, h_file, hash_str)
         LOG.error(msg)
         raise ChecksumException(msg)
+
+
+def _makedirs(p):
+    if not os.path.exists(p):
+        LOG.debug("Creating: {}".format(p))
+        os.makedirs(p)
 
 
 class LooseVersionExtended(LooseVersion):
