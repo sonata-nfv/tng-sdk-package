@@ -93,6 +93,10 @@ class InvalidVersionFormat(Exception):
     pass
 
 
+class NoOSMFilesFound(BaseException):
+    pass
+
+
 class PkgStatus(object):
     WAITING = "waiting"
     RUNNING = "running"
@@ -1028,6 +1032,7 @@ class OsmPackager(EtsiPackager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.checksum_algorithm = "MD5"
+        self.ns_temp_dir = None
 
     def _pack_create_napdr(self, *args, **kwargs):
         """
@@ -1143,8 +1148,8 @@ class OsmPackager(EtsiPackager):
                     elif tag[-3:-1] == ["osm", "vnf"]:
                         package_name = "_".join([self.project_name, tag[-1]])
                         self.unique_files.append((package_name, file))
-            #with tarfile.open(archive_path, "w:gz") as f:
-             #   f.add(temp)
+        if self.nsd is None and self.vnfds == []:
+            raise NoOSMFilesFound("No OSM-descriptor-files found in project")
 
     def create_temp_dirs(self, project_name):
         """
@@ -1157,12 +1162,13 @@ class OsmPackager(EtsiPackager):
         Returns:
             None
         """
-        self.ns_temp_dir = self.create_temp_dir(
-            "_".join([project_name,
-                      os.path.splitext(self.nsd["filename"])[0]]),
-            os.path.join(self.nsd["_project_source"]),
-            self.nsd["hash"],
-            OsmPackager.folders_nsd)
+        if not self.nsd is None:
+            self.ns_temp_dir = self.create_temp_dir(
+                "_".join([project_name,
+                          os.path.splitext(self.nsd["filename"])[0]]),
+                os.path.join(self.nsd["_project_source"]),
+                self.nsd["hash"],
+                OsmPackager.folders_nsd)
         self.vnf_temp_dirs = {}
         for vnfd in self.vnfds:
             package_name = "_".join([project_name,
@@ -1179,14 +1185,15 @@ class OsmPackager(EtsiPackager):
             None
         """
         # files for ns
-        for file in self.general_files+self.ns_files:
-            folder = os.path.join(self.ns_temp_dir,
-                                  file["source"])
-            _makedirs(folder)
-            shutil.copy(os.path.join(self.args.package,
-                                     file["_project_source"]), folder)
-        self.store_checksums(self.ns_temp_dir,
-                             self.general_files+self.ns_files)
+        if not self.ns_temp_dir is None:
+            for file in self.general_files+self.ns_files:
+                folder = os.path.join(self.ns_temp_dir,
+                                      file["source"])
+                _makedirs(folder)
+                shutil.copy(os.path.join(self.args.package,
+                                         file["_project_source"]), folder)
+            self.store_checksums(self.ns_temp_dir,
+                                 self.general_files+self.ns_files)
         # files for all vnfs
         for path in self.vnf_temp_dirs.values():
             for file in self.general_files+self.vnf_files:
@@ -1197,6 +1204,10 @@ class OsmPackager(EtsiPackager):
             self.store_checksums(path, self.general_files+self.vnf_files)
         # files for unique vnfs
         for package_name, file in self.unique_files:
+            if not package_name in self.vnf_temp_dirs:
+                LOG.warning("{} not found. {} ignored.".format(
+                    package_name, file["filename"]))
+                continue
             folder = os.path.join(self.vnf_temp_dirs[package_name],
                                   file["source"])
             _makedirs(folder)
@@ -1254,7 +1265,7 @@ class OsmPackager(EtsiPackager):
         else:
             LOG.error("No project path. Abort.")
             return NapdRecord()
-        LOG.info("Creating 5GTANGO package using project: '{}'"
+        LOG.info("Creating OSM package using project: '{}'"
                  .format(project_path))
         try:
             # 0. validate project with external validator
