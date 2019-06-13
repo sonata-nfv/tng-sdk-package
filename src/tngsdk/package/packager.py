@@ -1064,7 +1064,7 @@ class OsmPackager(EtsiPackager):
         Returns:
             None
         """
-        lines  = ["{} {}\n".format(file["hash"], file["filename"])
+        lines = ["{} {}\n".format(file["hash"], file["filename"])
                   for file in files]
         with open(os.path.join(path, checks_filename), "a") as f:
             f.writelines(lines)
@@ -1100,14 +1100,14 @@ class OsmPackager(EtsiPackager):
             path to the temp directory
         """
         temp = tempfile.mkdtemp()
-        if not subdir_name is None:
+        if subdir_name is not None:
             _makedirs(os.path.join(temp, subdir_name))
             temp = os.path.join(temp, subdir_name)
         for folder in folders:
             _makedirs(os.path.join(temp, folder))
-        if not descriptor is None:
+        if descriptor is not None:
             shutil.copy(os.path.join(self.args.package, descriptor), temp)
-        if not hash is None:
+        if hash is not None:
             with open(os.path.join(temp, checks_filename), "w") as f:
                 f.writelines(["{} {}\n".format(hash, descriptor)])
         return temp
@@ -1137,7 +1137,8 @@ class OsmPackager(EtsiPackager):
                 self.vnfds.append(file)
             else:
                 # find other relevant files
-                tags = map(lambda tag: tag.split("."), file["tags"])
+                tags = map(lambda tag: tag.split("."),
+                           file.get("tags", list()))
                 for tag in tags:
                     if tag[-1] == "osm":
                         self.general_files.append(file)
@@ -1162,21 +1163,21 @@ class OsmPackager(EtsiPackager):
         Returns:
             None
         """
-        if not self.nsd is None:
+        if self.nsd is not None:
             self.ns_temp_dir = self.create_temp_dir(
-                "_".join([project_name,
+                "_".join([project_name,  # subdir
                           os.path.splitext(self.nsd["filename"])[0]]),
-                os.path.join(self.nsd["_project_source"]),
-                self.nsd["hash"],
-                OsmPackager.folders_nsd)
+                os.path.join(self.nsd["_project_source"]),  # descriptor_path
+                self.nsd["hash"],  # hash
+                OsmPackager.folders_nsd)  # folders
         self.vnf_temp_dirs = {}
         for vnfd in self.vnfds:
-            package_name = "_".join([project_name,
+            package_name = "_".join([project_name,  # subdir
                                      os.path.splitext(vnfd["filename"])[0]])
             self.vnf_temp_dirs[package_name] = (
-                self.create_temp_dir(package_name,
-                                     vnfd["_project_source"],
-                                     vnfd["hash"]))
+                self.create_temp_dir(package_name,  # package_name
+                                     vnfd["_project_source"],  # desc_path
+                                     vnfd["hash"]))  # hash
 
     def attach_files(self):
         """
@@ -1185,7 +1186,7 @@ class OsmPackager(EtsiPackager):
             None
         """
         # files for ns
-        if not self.ns_temp_dir is None:
+        if self.ns_temp_dir is not None:
             for file in self.general_files+self.ns_files:
                 folder = os.path.join(self.ns_temp_dir,
                                       file["source"])
@@ -1204,7 +1205,7 @@ class OsmPackager(EtsiPackager):
             self.store_checksums(path, self.general_files+self.vnf_files)
         # files for unique vnfs
         for package_name, file in self.unique_files:
-            if not package_name in self.vnf_temp_dirs:
+            if package_name not in self.vnf_temp_dirs:
                 LOG.warning("{} not found. {} ignored.".format(
                     package_name, file["filename"]))
                 continue
