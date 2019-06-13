@@ -1065,7 +1065,7 @@ class OsmPackager(EtsiPackager):
             None
         """
         lines = ["{} {}\n".format(file["hash"], file["filename"])
-                  for file in files]
+                 for file in files]
         with open(os.path.join(path, checks_filename), "a") as f:
             f.writelines(lines)
 
