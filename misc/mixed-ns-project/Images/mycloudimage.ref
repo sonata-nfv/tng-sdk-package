@@ -1,0 +1,10 @@
+---
+descriptor_schema: "https://raw.githubusercontent.com/sonata-nfv/tng-schema/master/package-specification/ref-schema.yml"
+
+name: "mycloudimage"
+vendor: "eu.5gtango"
+version: "16.04"
+proto: "http"
+source: "http://ftp.halifax.rwth-aachen.de/ubuntu-releases/16.04.3/ubuntu-16.04.3-server-amd64.iso"
+algorithm: "SHA-256"
+hash: "x0e7828293355a07c2dccaaa765c80b507e60e6167067c950dc2e6b0da0dbd8b"
