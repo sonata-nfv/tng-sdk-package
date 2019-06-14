@@ -31,6 +31,7 @@
 # partner consortium (www.5gtango.eu).
 import requests
 import yaml
+import os
 from jsonschema import validate
 from tngsdk.package.logger import TangoLogger
 
@@ -100,18 +101,26 @@ def validate_yaml_online(data, schema_uri=None):
     try:
         # try to download schema
         r = requests.get(schema_uri, timeout=3)
-    except BaseException as e:
-        LOG.error("Couldn't fetch schema from '{}': {}".format(
-            schema_uri, e))
-        return False
-    try:
         # try to parse schema
         schema = yaml.load(r.text)
     except BaseException as e:
-        LOG.error("Couldn't parse schema from '{}': {}".format(
+        LOG.warning("Couldn't fetch schema from '{}': {}".format(
             schema_uri, e))
-        return False
+        # ok, no internet? lets try to use a local NAPD schema
+        try:
+            path = os.path.join(
+                os.path.expanduser("~"),
+                ".tng-schema/package-specification/napd-schema.yml")
+            LOG.info("Using local schema: {}".format(path))
+            with open(path, "r") as f:
+                schema = yaml.load(f)
+        except BaseException as e:
+            LOG.error("Get schema from '{}' or '{}': {}".format(
+                      schema_uri, path, e))
+            return False
     try:
+        if schema is None:
+            raise BaseException("No schema found online and offile")
         # validate data against schema
         validate(data, schema)
     except BaseException as e:
