@@ -1,0 +1,44 @@
+descriptor_extension: yml
+version: '0.5'
+package:
+  vendor: eu.5gtango
+  name: mixed-ns-package-example
+  version: '0.1'
+  maintainer: Manuel Peuster, Paderborn University
+  description: This is an example for a mixed network service project.
+files:
+- tags: []
+  path: Definitions/5gtango_nsd.yaml
+  type: application/vnd.5gtango.nsd
+- tags: []
+  path: Definitions/5gtango_vnfd.yaml
+  type: application/vnd.5gtango.vnfd
+- tags: []
+  path: osm_nsd.yaml
+  type: application/vnd.osm.nsd
+- tags: []
+  path: osm_vnfd.yaml
+  type: application/vnd.osm.vnfd
+- tags: []
+  path: onap_nsd.yaml
+  type: application/vnd.onap.nsd
+- tags: []
+  path: onap_vnfd.yaml
+  type: application/vnd.onap.vnfd
+- tags:
+  - etsi.osm
+  path: Icons/upb_logo.png
+  type: image/png
+- tags:
+  - etsi.osm.vnf.osm_vnfd
+  - folder.images
+  path: Images/mycloudimage.ref
+  type: application/vnd.5gtango.ref
+- tags: []
+  path: Licenses/LICENSE
+  type: text/plain
+- tags:
+  - etsi.osm.vnf
+  - folder.cloud_init
+  path: Scripts/cloud.init
+  type: text/x-shellscript

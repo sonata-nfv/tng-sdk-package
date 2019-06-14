@@ -1,0 +1,107 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+metadata:
+  nsd_invariant_id: c3887fb3-d1b2-477f-86c4-fd641ee9a7cf
+  nsd_name: vcpe
+  nsd_file_structure_version: "1.0.0"
+  nsd_designer: ONAP
+  nsd_release_date_time: "2018-11-05 12:00:00"
+description: VCPE Network Service
+imports:
+  - type_definition.yaml
+topology_template:
+  substitution_mappings:
+    node_type: tosca.nodes.nfv.NS
+    properties:
+       descriptor_id: ffdddc5d-a44b-45ae-8fc3-e6551cce350f
+       designer: ONAP
+       version: 1.0.0
+       name: vcpe
+       invariant_id: c3887fb3-d1b2-477f-86c4-fd641ee9a7cf
+
+  node_templates:
+    vgw:
+      type: tosca.nodes.nfv.VNF
+      properties:
+        descriptor_id: 3fca3543-07f5-492f-812c-ed462e4f94f4
+        provider: onap
+        product_name: vcpe_vgw
+        software_version: '1.0.0'
+        descriptor_version: '1.0.0'
+        flavour_id: simple
+        flavour_description: simple
+        vnfm_info: ['gvnfmdriver']
+      requirements:
+        - virtual_link: vcpe_public_net
+
+    vgmux:
+      type: tosca.nodes.nfv.VNF
+      properties:
+        descriptor_id: 0408f076-e6c0-4c82-9940-272fddbb82de
+        provider: onap
+        product_name: vcpe_vgmux
+        software_version: '1.0.0'
+        descriptor_version: '1.0.0'
+        flavour_id: simple
+        flavour_description: simple
+        vnfm_info: ['gvnfmdriver']
+      requirements:
+        - virtual_link: vcpe_public_net
+
+    vcpe_infra:
+      type: tosca.nodes.nfv.VNF
+      properties:
+        descriptor_id: b1bb0ce7-2222-4fa7-95ed-4840d70a1100
+        provider: onap
+        product_name: vcpe_infra
+        software_version: '1.0.0'
+        descriptor_version: '1.0.0'
+        flavour_id: simple
+        flavour_description: simple
+        vnfm_info: ['gvnfmdriver']
+      requirements:
+        - virtual_link: vcpe_public_net
+
+    vcpe_vbng:
+      type: tosca.nodes.nfv.VNF
+      properties:
+        descriptor_id: b1bb0ce7-2222-4fa7-95ed-4840d70a1101
+        provider: onap
+        product_name: vcpe_vbng
+        software_version: '1.0.0'
+        descriptor_version: '1.0.0'
+        flavour_id: simple
+        flavour_description: simple
+        vnfm_info: ['gvnfmdriver']
+      requirements:
+        - virtual_link: vcpe_public_net
+
+    vcpe_vbrgemu:
+      type: tosca.nodes.nfv.VNF
+      properties:
+        descriptor_id: b1bb0ce7-2222-4fa7-95ed-4840d70a1102
+        provider: onap
+        product_name: vcpe_vbrgemu
+        software_version: '1.0.0'
+        descriptor_version: '1.0.0'
+        flavour_id: simple
+        flavour_description: simple
+        vnfm_info: ['gvnfmdriver']
+      requirements:
+        - virtual_link: vcpe_public_net
+
+    vcpe_public_net:
+      type: tosca.nodes.nfv.NsVirtualLink
+      properties:
+        connectivity_type:
+          layer_protocol: ipv4
+        version: 1.0.0
+        vl_profile:
+          max_bit_rate_requirements:
+            root: 10000000
+            leaf: 10000000
+          min_bit_rate_requirements:
+            root: 10000000
+            leaf: 10000000
+          networkName: oam-zte
+          cidr: 172.30.23.0/24
+          dhcpEnabled: false
