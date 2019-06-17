@@ -244,66 +244,31 @@ class OsmPackager(EtsiPackager):
             return "cloud_init"
         return ""
 
-    def _do_package(self):
+    @EtsiPackager._do_package_closure
+    def _do_package(self, napdr, **kwargs):
         """
         Pack a 5GTANGO project to OSM packages.
         """
-        if self.args is not None:
-            project_path = self.args.package
-        else:
-            LOG.error("No project path. Abort.")
-            return NapdRecord()
-        LOG.info("Creating OSM package using project: '{}'"
-                 .format(project_path))
-        try:
-            # 0. validate project with external validator
-            if (self.args.skip_validation or
-                    self.args.validation_level == "skip"):
-                LOG.warning(
-                    "Skipping validation (--skip-validation).")
-            else:
-                validate_project_with_external_validator(
-                    self.args, project_path)
-            # 1. find and load project descriptor
-            if project_path is None or project_path == "None":
-                raise MissingInputException("No project path. Abort.")
-            project_descriptor = self._pack_read_project_descriptor(
-                project_path)
-            if project_descriptor is None:
-                raise MissingMetadataException("No project descriptor found.")
-            if self.args.autoversion:
-                project_descriptor = self.autoversion(project_descriptor)
-            # 2. create a NAPDR for the new package
-            napdr = self._pack_create_napdr(project_path, project_descriptor)
-            napdr.package_type = self._pack_get_package_type(napdr)
-            LOG.debug("Generated NAPDR: {}".format(napdr))
-            # 3. create a temporary working directory
-            wd = self.args.output
-            if wd is None:
-                wd = "{}.{}.{}".format(napdr.vendor,
-                                       napdr.name,
-                                       napdr.version)
-            if not os.path.exists(wd):
-                os.makedirs(wd)
-            napdr._project_wd = wd
-            self.project_name = os.path.basename(wd)
-            LOG.debug("Created working directory: {}"
-                      .format(napdr._project_wd))
-            # 4. assign files to objects
-            self._sort_files(napdr)
-            # 5. creating temporary directories and copy descriptors
-            self.create_temp_dirs(self.project_name)
-            # 6. copy files
-            self.attach_files()
-            # 7. create packages from temporary directories
-            self.create_packages(wd)
+        wd = self.args.output
+        if wd is None:
+            wd = "{}.{}.{}".format(napdr.vendor,
+                                   napdr.name,
+                                   napdr.version)
+        if not os.path.exists(wd):
+            os.makedirs(wd)
 
-            self.store_autoversion(project_descriptor, project_path)
-            return napdr
-        except BaseException as e:
-            LOG.error(str(e) + str(type(e)))
-            self.error_msg = str(e)
-            return NapdRecord(error=str(e))
+        self.project_name = os.path.basename(wd)
+
+        napdr._project_wd = wd
+        # 4. assign files to objects
+        self._sort_files(napdr)
+        # 5. creating temporary directories and copy descriptors
+        self.create_temp_dirs(self.project_name)
+        # 6. copy files
+        self.attach_files()
+        # 7. create packages from temporary directories
+        self.create_packages(wd)
+        return napdr
 
 
 class OsmPackagesSet(NapdRecord):

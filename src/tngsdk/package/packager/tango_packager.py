@@ -295,78 +295,37 @@ class TangoPackager(EtsiPackager):
         # TODO clean up temporary files and folders
         return napdr
 
-    def _do_package(self):
+    @EtsiPackager._do_package_closure
+    def _do_package(self, napdr, project_path, **kwargs):
         """
         Pack a 5GTANGO project to a 5GTANGO package.
         """
-        if self.args is not None:
-            project_path = self.args.package
-        else:
-            LOG.error("No project path. Abort.")
-            return NapdRecord()
-        LOG.info("Creating 5GTANGO package using project: '{}'"
-                 .format(project_path))
-        try:
-            # 0. validate project with external validator
-            if (self.args.skip_validation or
-                    self.args.validation_level == "skip"):
-                LOG.warning(
-                    "Skipping validation (--skip-validation).")
-            else:
-                validate_project_with_external_validator(
-                    self.args, project_path)
-            # 1. find and load project descriptor
-            if project_path is None or project_path == "None":
-                raise MissingInputException("No project path. Abort.")
-            project_descriptor = self._pack_read_project_descriptor(
-                project_path)
-            if project_descriptor is None:
-                raise MissingMetadataException("No project descriptor found.")
-            if self.args.autoversion:
-                project_descriptor = self.autoversion(project_descriptor)
-            # 2. create a NAPDR for the new package
-            napdr = self._pack_create_napdr(project_path, project_descriptor)
-            napdr.package_type = self._pack_get_package_type(napdr)
-            LOG.debug("Generated NAPDR: {}".format(napdr))
-            # 3. create a temporary working directory
-            napdr._project_wd = tempfile.mkdtemp()
-            LOG.debug("Created temp. working directory: {}"
-                      .format(napdr._project_wd))
-            # TODO refactor: from here on the packaging code is format specific
-            # 4. generate package's directory tree
-            self._pack_create_package_directory_tree(napdr)
-            # 5. copy project files to package tree
-            self._pack_copy_files_to_package_directory_tree(
-                project_path, napdr)
-            # 6. generate/write NAPD
-            napd_path = self._pack_write_napd(napdr)
-            # 7. generate/write ETSI MF
-            etsi_mf_path = self._pack_gen_write_etsi_manifest(napdr)
-            # 8. generate/write TOSCA
-            self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
-            # 9. zip package
-            auto_file_name = "{}.{}.{}.tgo".format(napdr.vendor,
-                                                   napdr.name,
-                                                   napdr.version)
-            path_dest = self.args.output
-            if path_dest is None:
-                path_dest = auto_file_name
-            if os.path.isdir(path_dest):
-                path_dest = os.path.join(path_dest, auto_file_name)
-            creat_zip_file_from_directory(napdr._project_wd, path_dest)
-            LOG.info("Package created: '{}'"
-                     .format(path_dest))
-            if self.args.autoversion:
-                self.store_autoversion(project_descriptor,
-                                       project_path)
-            # annotate napdr
-            napdr.metadata["_storage_location"] = path_dest
-            return napdr
-        except BaseException as e:
-            LOG.error(str(e))
-            self.error_msg = str(e)
-            return NapdRecord(error=str(e))
-
+        # 4. generate package's directory tree
+        self._pack_create_package_directory_tree(napdr)
+        # 5. copy project files to package tree
+        self._pack_copy_files_to_package_directory_tree(
+            project_path, napdr)
+        # 6. generate/write NAPD
+        napd_path = self._pack_write_napd(napdr)
+        # 7. generate/write ETSI MF
+        etsi_mf_path = self._pack_gen_write_etsi_manifest(napdr)
+        # 8. generate/write TOSCA
+        self._pack_gen_write_tosca_manifest(napdr, napd_path, etsi_mf_path)
+        # 9. zip package
+        auto_file_name = "{}.{}.{}.tgo".format(napdr.vendor,
+                                               napdr.name,
+                                               napdr.version)
+        path_dest = self.args.output
+        if path_dest is None:
+            path_dest = auto_file_name
+        if os.path.isdir(path_dest):
+            path_dest = os.path.join(path_dest, auto_file_name)
+        creat_zip_file_from_directory(napdr._project_wd, path_dest)
+        LOG.info("Package created: '{}'"
+                 .format(path_dest))
+        # annotate napdr
+        napdr.metadata["_storage_location"] = path_dest
+        return napdr
 
 # #########################
 # Helpers

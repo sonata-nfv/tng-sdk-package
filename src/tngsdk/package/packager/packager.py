@@ -40,8 +40,10 @@ import datetime
 import pprint
 import pyrfc3339
 import hashlib
+import tempfile
 from tngsdk.package.helper import dictionary_deep_merge, file_hash, search_for_file
 from tngsdk.package.logger import TangoLogger
+from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.packager.exeptions import *
 from distutils.version import LooseVersion
 
@@ -232,15 +234,64 @@ class Packager(object):
         if callback_func:
             callback_func(self)
 
-    def _do_unpackage(self):
+    def _do_unpackage(self, *args, **kwargs):
         LOG.error("_do_unpackage has to be overwritten")
         # time.sleep(2)
         return NapdRecord(error="_do_unpackage has to be overwritten")
 
-    def _do_package(self):
+    def _do_package(self, *args, **kwargs):
         LOG.error("_do_package has to be overwritten")
         # time.sleep(2)
         return NapdRecord(error="_do_package has to be overwritten")
+
+    @staticmethod
+    def _do_package_closure(function):
+        def _do_package_function(self):
+            if self.args is not None:
+                project_path = self.args.package
+            else:
+                LOG.error("No project path. Abort.")
+                return NapdRecord()
+            LOG.info("Creating 5GTANGO package using project: '{}'"
+                     .format(project_path))
+            try:
+                # 0. validate project with external validator
+                if (self.args.skip_validation or
+                        self.args.validation_level == "skip"):
+                    LOG.warning(
+                        "Skipping validation (--skip-validation).")
+                else:
+                    validate_project_with_external_validator(
+                        self.args, project_path)
+                # 1. find and load project descriptor
+                if project_path is None or project_path == "None":
+                    raise MissingInputException("No project path. Abort.")
+                project_descriptor = self._pack_read_project_descriptor(
+                    project_path)
+                if project_descriptor is None:
+                    raise MissingMetadataException("No project descriptor found.")
+                if self.args.autoversion:
+                    project_descriptor = self.autoversion(project_descriptor)
+                # 2. create a NAPDR for the new package
+                napdr = self._pack_create_napdr(project_path, project_descriptor)
+                napdr.package_type = self._pack_get_package_type(napdr)
+                LOG.debug("Generated NAPDR: {}".format(napdr))
+                # 3. create a temporary working directory
+                napdr._project_wd = tempfile.mkdtemp()
+                LOG.debug("Created temp. working directory: {}"
+                          .format(napdr._project_wd))
+
+                function(**locals())
+
+                self.store_autoversion(project_descriptor, project_path)
+                return napdr
+            except BaseException as e:
+                LOG.error("{}; Exception of type: {}".format(
+                    str(e), str(type(e))))
+                self.error_msg = str(e)
+                return NapdRecord(error=str(e))
+
+        return _do_package_function
 
     def _pack_get_package_type(self, napdr):
         """
