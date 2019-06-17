@@ -2,7 +2,8 @@ from tngsdk.package.logger import TangoLogger
 from tngsdk.package.packager.packager import EtsiPackager, TestPackager
 from tngsdk.package.packager.tango_packager import TangoPackager
 from tngsdk.package.packager.osm_packager import OsmPackager
-from tngsdk.package.packager.exeptions import UnsupportedPackageFormatException
+from tngsdk.package.packager.exeptions import \
+    UnsupportedPackageFormatException
 
 LOG = TangoLogger.getLogger(__name__)
 

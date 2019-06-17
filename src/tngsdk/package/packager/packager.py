@@ -41,7 +41,8 @@ import pprint
 import pyrfc3339
 import hashlib
 import tempfile
-from tngsdk.package.helper import dictionary_deep_merge, file_hash, search_for_file
+from tngsdk.package.helper import dictionary_deep_merge, file_hash,\
+    search_for_file
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.packager.exeptions import *
@@ -142,7 +143,8 @@ class NapdRecord(object):
                         or "algorithm" not in ce
                         or "hash" not in ce):
                     continue  # skip incomplete entries
-                existing_ce = self.find_package_content_entry(ce.get("source"))
+                existing_ce = (
+                    self.find_package_content_entry(ce.get("source")))
                 if existing_ce is not None:
                     dictionary_deep_merge(existing_ce, ce)
                 else:  # additional entry
@@ -269,11 +271,13 @@ class Packager(object):
                 project_descriptor = self._pack_read_project_descriptor(
                     project_path)
                 if project_descriptor is None:
-                    raise MissingMetadataException("No project descriptor found.")
+                    raise MissingMetadataException(
+                        "No project descriptor found.")
                 if self.args.autoversion:
                     project_descriptor = self.autoversion(project_descriptor)
                 # 2. create a NAPDR for the new package
-                napdr = self._pack_create_napdr(project_path, project_descriptor)
+                napdr = self._pack_create_napdr(project_path,
+                                                project_descriptor)
                 napdr.package_type = self._pack_get_package_type(napdr)
                 LOG.debug("Generated NAPDR: {}".format(napdr))
                 # 3. create a temporary working directory
@@ -613,7 +617,8 @@ class EtsiPackager(CsarBasePackager):
             # check and validate ce data
             if "source" not in ce:
                 raise MissingMetadataException(
-                    "Malformed package_content entry: source field missing: {}"
+                    """Malformed package_content entry:
+                    source field missing: {}"""
                     .format(ce))
             if ce.get("algorithm") is None:
                 # warn and skip entry (a risk but makes things easier for now)
