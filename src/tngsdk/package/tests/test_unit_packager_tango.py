@@ -35,7 +35,8 @@ import tempfile
 import os
 import yaml
 from tngsdk.package.cli import parse_args
-from tngsdk.package.packager import PM, LooseVersionExtended
+from tngsdk.package.packager import PM
+from tngsdk.package.packager.packager import LooseVersionExtended
 from tngsdk.package.tests.fixtures import misc_file
 from shutil import copytree
 

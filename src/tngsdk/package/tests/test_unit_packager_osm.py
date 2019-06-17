@@ -3,8 +3,10 @@ import tempfile
 import os
 import tarfile
 from tngsdk.package.tests.fixtures import misc_file
-from tngsdk.package.packager import PM, NapdRecord,\
-    NoOSMFilesFound, OsmPackager
+from tngsdk.package.packager import PM
+from tngsdk.package.packager.packager import NapdRecord
+from tngsdk.package.packager.exeptions import NoOSMFilesFound
+from tngsdk.package.packager.osm_packager import OsmPackager
 from tngsdk.package.cli import parse_args
 
 
