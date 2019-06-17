@@ -46,6 +46,18 @@ from tngsdk.package.helper import dictionary_deep_merge, file_hash,\
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.packager.exeptions import *
+"""
+from tngsdk.package.packager.exeptions import *:
+    UnsupportedPackageFormatException(BaseException)
+    MissingInputException(BaseException)
+    MissingMetadataException(BaseException)
+    MissingFileException(BaseException)
+    NapdNotValidException(BaseException)
+    MetadataValidationException(BaseException)
+    ChecksumException(BaseException)
+    InvalidVersionFormat(Exception)
+    NoOSMFilesFound(BaseException)
+"""
 from distutils.version import LooseVersion
 
 
