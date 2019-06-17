@@ -7,9 +7,7 @@ import time
 import pyrfc3339
 from tngsdk.package.validator import validate_project_with_external_validator, validate_yaml_online
 from tngsdk.package.packager.packager import EtsiPackager, NapdRecord
-from tngsdk.package.packager.exeptions import MissingInputException,\
-    MissingMetadataException,\
-    MetadataValidationException,\
+from tngsdk.package.packager.exeptions import MetadataValidationException,\
     NapdNotValidException,\
     ChecksumException,\
     MissingFileException

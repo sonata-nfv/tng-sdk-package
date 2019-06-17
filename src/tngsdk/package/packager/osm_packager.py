@@ -5,8 +5,7 @@ import shutil
 import tarfile
 from tngsdk.package.helper import file_hash, _makedirs
 from tngsdk.package.packager.packager import EtsiPackager, NapdRecord
-from tngsdk.package.validator import validate_project_with_external_validator
-from tngsdk.package.packager.exeptions import NoOSMFilesFound, MissingInputException, MissingMetadataException
+from tngsdk.package.packager.exeptions import NoOSMFilesFound
 from tngsdk.package.logger import TangoLogger
 
 LOG = TangoLogger.getLogger(__name__)
