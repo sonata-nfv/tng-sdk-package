@@ -41,7 +41,8 @@ from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.datastructures import FileStorage
 import requests
 from requests.exceptions import RequestException
-from tngsdk.package.packager import PM, extract_zip_file_to_temp
+from tngsdk.package.packager import PM
+from tngsdk.package.helper import extract_zip_file_to_temp
 from tngsdk.package.storage.tngcat import TangoCatalogBackend
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.storage.osmnbi import OsmNbiBackend
