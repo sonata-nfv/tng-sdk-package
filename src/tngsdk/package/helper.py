@@ -79,7 +79,7 @@ def file_hash(path, h_func=hashlib.sha256):
 
 
 def _makedirs(p):
-    if not os.path.exists(p):
+    if not os.path.exists(p) and p != "":
         LOG.debug("Creating: {}".format(p))
         os.makedirs(p)
 

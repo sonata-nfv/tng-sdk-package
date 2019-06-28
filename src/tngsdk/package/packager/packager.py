@@ -297,11 +297,11 @@ class Packager(object):
                 LOG.debug("Created temp. working directory: {}"
                           .format(napdr._project_wd))
 
-                function(**locals())
+                napdr = function(**locals())
 
                 self.store_autoversion(project_descriptor, project_path)
                 return napdr
-            except BaseException as e:
+            except FileExistsError as e:
                 LOG.error("{}; Exception of type: {}".format(
                     str(e), str(type(e))))
                 self.error_msg = str(e)
@@ -385,7 +385,7 @@ class Packager(object):
         for f in pd.get("files"):
             r = {"source": self._pack_package_source_path(f),
                  "algorithm": self.checksum_algorithm,
-                 "hash": self.file_hash(os.path.join(pp, f.get("path"))),
+                 "hash": self.file_hash(os.path.join(pp, f.get("path")), ),
                  "content-type": f.get("type", "text/plain"),
                  "tags": f.get("tags", list()),
                  "testing_tags": f.get("testing_tags", list()),
