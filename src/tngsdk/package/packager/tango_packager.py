@@ -330,6 +330,7 @@ class TangoPackager(EtsiPackager):
 # Helpers
 # #########################
 
+
 def creat_zip_file_from_directory(path_src, path_dest):
     LOG.debug("Zipping '{}' ...".format(path_dest))
     t_start = time.time()

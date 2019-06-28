@@ -4,8 +4,7 @@ import tempfile
 import shutil
 import tarfile
 from tngsdk.package.helper import file_hash, _makedirs
-from tngsdk.package.packager.packager import Packager, EtsiPackager, \
-    NapdRecord
+from tngsdk.package.packager.packager import EtsiPackager, NapdRecord
 from tngsdk.package.packager.exeptions import NoOSMFilesFound
 from tngsdk.package.logger import TangoLogger
 
