@@ -301,7 +301,7 @@ class Packager(object):
 
                 self.store_autoversion(project_descriptor, project_path)
                 return napdr
-            except FileExistsError as e:
+            except BaseException as e:
                 LOG.error("{}; Exception of type: {}".format(
                     str(e), str(type(e))))
                 self.error_msg = str(e)

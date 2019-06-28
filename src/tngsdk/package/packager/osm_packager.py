@@ -173,7 +173,7 @@ class OsmPackager(EtsiPackager):
             return "cloud_init"
         return ""
 
-    @Packager._do_package_closure
+    @EtsiPackager._do_package_closure
     def _do_package(self, napdr, project_path=None, **kwargs):
         """
         Pack a 5GTANGO project to OSM packages.
