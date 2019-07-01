@@ -31,14 +31,18 @@ files:
   type: image/png
 - tags:
   - etsi.osm.vnf.osm_vnfd
-  - folder.images
+  - osm-target:images
   path: Images/mycloudimage.ref
   type: application/vnd.5gtango.ref
 - tags: []
   path: Licenses/LICENSE
   type: text/plain
 - tags:
+  - etsi.osm.vnf.osm_vnfd
+  path: test
+  type: text/plain
+- tags:
   - etsi.osm.vnf
-  - folder.cloud_init
+  - osm-target:cloud_init
   path: Scripts/cloud.init
   type: text/x-shellscript

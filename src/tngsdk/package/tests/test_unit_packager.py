@@ -35,7 +35,8 @@ import unittest
 import threading
 import yaml
 from tngsdk.package.cli import parse_args
-from tngsdk.package.packager import PM, parse_block_based_meta_file
+from tngsdk.package.packager import PM
+from tngsdk.package.packager.packager import parse_block_based_meta_file
 from tempfile import NamedTemporaryFile
 
 
