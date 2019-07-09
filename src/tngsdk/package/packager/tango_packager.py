@@ -2,8 +2,6 @@ import os
 import tempfile
 import shutil
 import yaml
-import zipfile
-import time
 import pyrfc3339
 from tngsdk.package.validator import \
     validate_project_with_external_validator, validate_yaml_online
@@ -12,7 +10,8 @@ from tngsdk.package.packager.exeptions import MetadataValidationException,\
     NapdNotValidException,\
     ChecksumException,\
     MissingFileException
-from tngsdk.package.helper import search_for_file, extract_zip_file_to_temp
+from tngsdk.package.helper import search_for_file, extract_zip_file_to_temp,\
+    creat_zip_file_from_directory
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.logger import TangoLogger
 
@@ -329,19 +328,6 @@ class TangoPackager(EtsiPackager):
 # #########################
 # Helpers
 # #########################
-
-
-def creat_zip_file_from_directory(path_src, path_dest):
-    LOG.debug("Zipping '{}' ...".format(path_dest))
-    t_start = time.time()
-    zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
-    for root, _, files in os.walk(path_src):
-        for f in files:
-            zf.write(os.path.join(root, f),
-                     os.path.relpath(
-                         os.path.join(root, f), path_src))
-    zf.close()
-    LOG.debug("Zipping done ({:.4f}s)".format(time.time()-t_start))
 
 
 def fuzzy_find_wd(wd):

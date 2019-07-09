@@ -45,7 +45,7 @@ class OsmPackager(EtsiPackager):
             None
         """
         lines = ["{} {}\n".format(file["hash"], file["filename"])
-                 for file in files]
+                 for file in files if isinstance(file["hash"], str)]
         with open(os.path.join(path, checks_filename), "a") as f:
             f.writelines(lines)
 
@@ -172,6 +172,37 @@ class OsmPackager(EtsiPackager):
             return "cloud_init"
         return ""
 
+    def compress_subfolders(self, project_descriptor, pp):
+        """
+        Overloads function in parent class. Doesn't actually compress the
+        subfolder. Adds all files of subfolder to the project descriptor
+        instead.
+        Args:
+            project_descriptor:
+            pp:
+
+        Returns:
+
+        """
+        subfolder_files = []
+        subfolders = []
+        for i, file in enumerate(project_descriptor["files"]):
+            if 'application/vnd.folder.compressed.zip' == file["type"]:
+                foldername = os.path.basename(file["path"])
+                files = os.listdir(os.path.join(pp, file["path"]))
+                tags = [tg.split(":")[0] for tg in file["tags"]]
+                if "osm-target" not in tags:
+                    file["tags"].append(
+                        "osm-target:{}".format(foldername))
+                subfolder_files.extend(list(
+                    map(lambda f: {"path": os.path.join(file["path"], f),
+                                   "type": "text/plain",
+                                   "tags": file["tags"]}, files)))
+                subfolders.append(i)
+        for i in subfolders[::-1]:
+            project_descriptor["files"].pop(i)
+        project_descriptor["files"].extend(subfolder_files)
+
     @EtsiPackager._do_package_closure
     def _do_package(self, napdr, project_path=None, **kwargs):
         """
@@ -196,7 +227,6 @@ class OsmPackager(EtsiPackager):
         self.attach_files(osm_package_set, project_path)
         # 7. create packages from temporary directories
         self.pack_packages(wd, osm_package_set)
-        osm_package_set.__dict__.update(napdr.__dict__)
         return osm_package_set
 
 

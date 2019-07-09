@@ -41,8 +41,9 @@ import pprint
 import pyrfc3339
 import hashlib
 import tempfile
+import zipfile
 from tngsdk.package.helper import dictionary_deep_merge, file_hash,\
-    search_for_file
+    search_for_file, creat_zip_file_from_directory
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.validator import validate_project_with_external_validator
 from tngsdk.package.packager.exeptions import MissingInputException,\
@@ -277,6 +278,16 @@ class Packager(object):
                         "No project descriptor found.")
                 if self.args.autoversion:
                     project_descriptor = self.autoversion(project_descriptor)
+                if not self.args.no_subfolder_compression:
+                    self.compress_subfolders(project_descriptor,
+                                             project_path)
+                else:
+                    LOG.warning("Ignoring subfolder because of argument" +
+                                " --no-subfolder-compression")
+                    _type = 'application/vnd.folder.compressed.zip'
+                    _filter = lambda file: file["type"] != _type
+                    project_descriptor["files"] = \
+                        list(filter(_filter, project_descriptor["files"]))
                 # 2. create a NAPDR for the new package
                 napdr = self._pack_create_napdr(project_path,
                                                 project_descriptor)
@@ -298,6 +309,40 @@ class Packager(object):
                 return NapdRecord(error=str(e))
 
         return _do_package_function
+
+    def compress_subfolders(self, project_descriptor, pp):
+        """
+        Finds subfolders (package_content of type
+        'application/vnd.folder.compressed.zip') and zips them to a temp
+        directory.
+        Args:
+            project_descriptor:
+            pp:
+
+        Returns:
+            None
+        """
+        for file in project_descriptor["files"]:
+            if 'application/vnd.folder.compressed.zip' == file["type"]:
+                file["_project_source"] = self.zip_subfolder(pp=pp, **file)
+
+    def zip_subfolder(self, path, pp, **kwargs):
+        """
+        Zipping folder at path to a temporary directory.
+        Args:
+            path:
+            pp:
+            **kwargs:
+
+        Returns:
+            path to the zip file
+        """
+        tmp = tempfile.mkdtemp()
+        filename = "{}.zip".format(os.path.basename(path))
+        src = os.path.join(pp, path)
+        dest = os.path.join(tmp, filename)
+        creat_zip_file_from_directory(src, dest)
+        return dest
 
     def _pack_get_package_type(self, napdr):
         """
@@ -349,12 +394,14 @@ class Packager(object):
                         "{} field missing in PD/package".format(field))
             # check if all linked files exist
             for f in data.get("files"):
-                if (f.get("path") is None
-                        or not os.path.isfile(
-                            os.path.join(project_path, f.get("path")))):
+                if (f.get("path") is None or
+                    not os.path.isfile(
+                        os.path.join(project_path, f.get("path"))) and
+                    not f.get("type") ==
+                        "application/vnd.folder.compressed.zip"):
                     raise MissingFileException(
-                        "Could not find file linked in project.yml: {}"
-                        .format(f.get("path")))
+                        "Could not find file linked in project.yml:{}".format(
+                            f.get("path")))
             return data
         return None
 
@@ -375,11 +422,12 @@ class Packager(object):
         for f in pd.get("files"):
             r = {"source": self._pack_package_source_path(f),
                  "algorithm": self.checksum_algorithm,
-                 "hash": self.file_hash(os.path.join(pp, f.get("path")), ),
+                 "hash": self.file_hash(
+                     os.path.join(pp, self._project_source_path(f))),
                  "content-type": f.get("type", "text/plain"),
                  "tags": f.get("tags", list()),
                  "testing_tags": f.get("testing_tags", list()),
-                 "_project_source": f.get("path"),
+                 "_project_source": self._project_source_path(f),
                  }
             napdr.package_content.append(r)
         return napdr
@@ -399,7 +447,15 @@ class Packager(object):
             # translate
             return os.path.join("Definitions/", f.get("path"))
         # use original
+        if f.get("type") == 'application/vnd.folder.compressed.zip':
+            return "{}.zip".format(f.get("path"))
         return f.get("path")
+
+    def _project_source_path(self, f):
+        if "_project_source" in f:
+            return f["_project_source"]
+        else:
+            return f.get("path")
 
     def autoversion(self, project_descriptor, index=2):
         """
