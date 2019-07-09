@@ -35,7 +35,7 @@ import shutil
 import yaml
 from tngsdk.package.storage import BaseStorageBackend
 from tngsdk.package.logger import TangoLogger
-
+from tngsdk.package.helper import extract_zip_file_to_temp
 
 LOG = TangoLogger.getLogger(__name__)
 
@@ -115,6 +115,17 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
             pm.get("files").append(tmp)
         return pm
 
+    def extract_subfolder_zips(self, pm, pd):
+        for file in pm["files"]:
+            if file["type"] == 'application/vnd.folder.compressed.zip':
+                src = os.path.join(pd, file["path"])
+                new_path = os.path.splitext(file["path"])[0]
+                dest = os.path.join(pd, new_path)
+                extract_zip_file_to_temp(src, dest)
+                file["path"] = new_path
+                os.remove(src)
+
+
     def _copy_package_content_to_project(self, napdr, wd, pd):
         """
         Copies all unpackaged artifacts to project directory.
@@ -148,7 +159,9 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
         self._create_project_tree(pd)
         # 4. copy artifacts from package to project
         self._copy_package_content_to_project(napdr, wd, pd)
-        # 5. write project.yml
+        # 5. extract subfolder zips if there are any
+        self.extract_subfolder_zips(pm, pd)
+        # 6. write project.yml
         with open(os.path.join(pd, PROJECT_MANIFEST_NAME), "w") as f:
             yaml.dump(pm, f, default_flow_style=False)
         LOG.info("tng-prj-be: Created 5GTANGO SDK project: {}".format(pd))
