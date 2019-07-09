@@ -270,6 +270,15 @@ projects_parser.add_argument("no_checksums",
                              store_missing=True,
                              location="form",
                              help="Do not validate artifact checksums.")
+projects_parser.add_argument("no_subfolder_compression",
+                             help="""Ignore type:
+                             application/vnd.folder.compressed.zip""",
+                             required=False,
+                             default=None,
+                             store_missing=True,
+                             type=inputs.boolean,
+                             dest="no_subfolder_compression",
+                             location="form")
 
 
 ping_get_return_model = api_v1.model("PingGetReturn", {
