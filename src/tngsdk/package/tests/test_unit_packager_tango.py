@@ -34,10 +34,12 @@ import unittest
 import tempfile
 import os
 import yaml
+import zipfile
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import LooseVersionExtended
 from tngsdk.package.tests.fixtures import misc_file
+from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from shutil import copytree
 
 
@@ -592,3 +594,47 @@ class TngSdkPackageTangoPackagerEndToEndTest(unittest.TestCase):
             self.default_args, pkg_format="eu.5gtango")
         r = self.p._do_unpackage()
         self.assertIsNone(r.error)
+
+    def test_package_unpackage_with_subfolder_compression(self):
+        self.default_args = parse_args([])
+        self.default_args.package = misc_file(
+            "mixed-ns-project-subfolder-test")
+        self.default_args.output = os.path.join(tempfile.mkdtemp(),
+                                                "test.tgo")
+        pkg_path = self.default_args.output
+        p = PM.new_packager(self.default_args, pkg_format="eu.5gtango")
+        r = p._do_package()
+        self.assertIsNone(r.error)
+        # check *.tgo file
+        self.assertTrue(os.path.exists(self.default_args.output))
+        subfolder_files = misc_file("mixed-ns-project-subfolder-test")
+        subfolder_files = os.path.join(subfolder_files, "subfolder")
+        subfolder_files = os.listdir(subfolder_files)
+        tmp = tempfile.mkdtemp()
+        with zipfile.ZipFile(pkg_path) as zf:
+            zf.extract("subfolder.zip", path=tmp)
+        with zipfile.ZipFile(os.path.join(tmp, "subfolder.zip")) as zf:
+            names = zf.namelist()
+            for file in subfolder_files:
+                self.assertIn(file, names)
+
+        self.default_args = parse_args([])
+        self.default_args.unpackage = pkg_path
+        self.default_args.output = tempfile.mkdtemp()
+        self.p = PM.new_packager(
+            self.default_args, pkg_format="eu.5gtango",
+            storage_backend=TangoProjectFilesystemBackend(self.default_args))
+        r = self.p._do_unpackage()
+        storage_location = r.metadata.get("_storage_location")
+        self.assertIsNone(r.error)
+
+        self.assertTrue(os.path.exists(storage_location),
+                        msg=storage_location)
+        self.assertTrue(os.path.exists(
+            os.path.join(storage_location, "subfolder")),
+            msg=os.listdir(storage_location))
+        self.assertTrue(os.path.isdir(
+            os.path.join(storage_location, "subfolder")))
+        names = os.listdir(os.path.join(storage_location, "subfolder"))
+        for file in subfolder_files:
+            self.assertIn(file, names)
