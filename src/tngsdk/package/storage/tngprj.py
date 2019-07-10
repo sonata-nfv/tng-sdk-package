@@ -125,7 +125,6 @@ class TangoProjectFilesystemBackend(BaseStorageBackend):
                 file["path"] = new_path
                 os.remove(src)
 
-
     def _copy_package_content_to_project(self, napdr, wd, pd):
         """
         Copies all unpackaged artifacts to project directory.

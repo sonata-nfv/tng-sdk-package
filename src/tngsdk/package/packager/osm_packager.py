@@ -226,7 +226,6 @@ class OsmPackager(EtsiPackager):
                                       sub_subfolder_files)))
         return files
 
-
     @EtsiPackager._do_package_closure
     def _do_package(self, napdr, project_path=None, **kwargs):
         """

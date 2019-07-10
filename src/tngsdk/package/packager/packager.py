@@ -41,7 +41,6 @@ import pprint
 import pyrfc3339
 import hashlib
 import tempfile
-import zipfile
 from tngsdk.package.helper import dictionary_deep_merge, file_hash,\
     search_for_file, creat_zip_file_from_directory
 from tngsdk.package.logger import TangoLogger
@@ -285,7 +284,10 @@ class Packager(object):
                     LOG.warning("Ignoring subfolder because of argument" +
                                 " --no-subfolder-compression")
                     _type = 'application/vnd.folder.compressed.zip'
-                    _filter = lambda file: file["type"] != _type
+
+                    def _filter(file):
+                        return file["type"] != _type
+
                     project_descriptor["files"] = \
                         list(filter(_filter, project_descriptor["files"]))
                 # 2. create a NAPDR for the new package
