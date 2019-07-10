@@ -2,7 +2,7 @@ import unittest
 import tempfile
 import os
 import tarfile
-from tngsdk.package.tests.fixtures import misc_file
+from tngsdk.package.tests.fixtures import misc_file, get_files
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import NapdRecord
 from tngsdk.package.packager.exeptions import NoOSMFilesFound
@@ -260,7 +260,8 @@ class TngSdkPackageOSMPackager(unittest.TestCase):
         self.assertIsNone(napdr.error)
 
         packages = os.listdir(output)
-        subfolder_files = os.listdir(os.path.join(project, "subfolder"))
+        subfolder_files = get_files(os.path.join(project, "subfolder"))
+        print(subfolder_files)
         for package in packages:
             with tarfile.open(os.path.join(output, package)) as f:
                 member_names = list(

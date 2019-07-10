@@ -38,7 +38,7 @@ import zipfile
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import LooseVersionExtended
-from tngsdk.package.tests.fixtures import misc_file
+from tngsdk.package.tests.fixtures import misc_file, get_files
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from shutil import copytree
 
@@ -607,14 +607,15 @@ class TngSdkPackageTangoPackagerEndToEndTest(unittest.TestCase):
         self.assertIsNone(r.error)
         # check *.tgo file
         self.assertTrue(os.path.exists(self.default_args.output))
-        subfolder_files = misc_file("mixed-ns-project-subfolder-test")
-        subfolder_files = os.path.join(subfolder_files, "subfolder")
-        subfolder_files = os.listdir(subfolder_files)
+        pp = misc_file("mixed-ns-project-subfolder-test")
+        subfolder_files = os.path.join(pp, "subfolder")
+        subfolder_files = get_files(subfolder_files)
         tmp = tempfile.mkdtemp()
         with zipfile.ZipFile(pkg_path) as zf:
             zf.extract("subfolder.zip", path=tmp)
         with zipfile.ZipFile(os.path.join(tmp, "subfolder.zip")) as zf:
             names = zf.namelist()
+            names = [os.path.basename(file) for file in names]
             for file in subfolder_files:
                 self.assertIn(file, names)
 
@@ -635,6 +636,6 @@ class TngSdkPackageTangoPackagerEndToEndTest(unittest.TestCase):
             msg=os.listdir(storage_location))
         self.assertTrue(os.path.isdir(
             os.path.join(storage_location, "subfolder")))
-        names = os.listdir(os.path.join(storage_location, "subfolder"))
+        names = get_files(os.path.join(storage_location, "subfolder"))
         for file in subfolder_files:
             self.assertIn(file, names)
