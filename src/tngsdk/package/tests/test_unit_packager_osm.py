@@ -2,7 +2,7 @@ import unittest
 import tempfile
 import os
 import tarfile
-from tngsdk.package.tests.fixtures import misc_file
+from tngsdk.package.tests.fixtures import misc_file, get_files
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import NapdRecord
 from tngsdk.package.packager.exeptions import NoOSMFilesFound
@@ -244,6 +244,31 @@ class TngSdkPackageOSMPackager(unittest.TestCase):
                 for file in vnf.package_content:
                     filename = os.path.basename(file["filename"])
                     self.assertIn(filename, file_members)
+
+    def test_do_package_subfolder(self):
+        # prepare test
+        project = misc_file("mixed-ns-project-subfolder-test")
+        output = tempfile.mkdtemp()
+        args = parse_args(["--format", "eu.etsi.osm",
+                           "-p", project,
+                           "-o", output])
+        p = PM.new_packager(args, pkg_format=args.pkg_format)
+
+        # execute
+        napdr = p._do_package()
+
+        self.assertIsNone(napdr.error)
+
+        packages = os.listdir(output)
+        subfolder_files = get_files(os.path.join(project, "subfolder"))
+        print(subfolder_files)
+        for package in packages:
+            with tarfile.open(os.path.join(output, package)) as f:
+                member_names = list(
+                    map(lambda member: os.path.basename(member.name),
+                        f.getmembers()))
+                for file in subfolder_files:
+                    self.assertIn(file, member_names)
 
 
 class TngSdkPackageOSMPackageSet(unittest.TestCase):

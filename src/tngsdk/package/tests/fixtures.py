@@ -41,3 +41,15 @@ def misc_file(filename):
     abs_path = os.path.dirname(__file__).replace(
         "src/tngsdk/package/tests", "")
     return os.path.join(abs_path, "misc/{}".format(filename))
+
+
+def get_files(path):
+    files = os.listdir(path)
+    dirs = []
+    for i, file in enumerate(files):
+        if os.path.isdir(os.path.join(path, file)):
+            files.extend(get_files(os.path.join(path, file)))
+            dirs.append(i)
+    for i in dirs[::-1]:
+        files.pop(i)
+    return files
