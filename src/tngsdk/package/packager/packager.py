@@ -427,10 +427,15 @@ class Packager(object):
                  "hash": self.file_hash(
                      os.path.join(pp, self._project_source_path(f))),
                  "content-type": f.get("type", "text/plain"),
-                 "tags": f.get("tags", list()),
-                 "testing_tags": f.get("testing_tags", list()),
+                 "tags": f.get("tags"),
+                 "testing_tags": f.get("testing_tags"),
                  "_project_source": self._project_source_path(f),
                  }
+            # turn tag fields that are "None" into empty lists
+            if r.get("tags") is None:
+                r["tags"] = list()
+            if r.get("testing_tags") is None:
+                r["testing_tags"] = list()
             napdr.package_content.append(r)
         return napdr
 
