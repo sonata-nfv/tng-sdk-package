@@ -2,6 +2,7 @@ from tngsdk.package.logger import TangoLogger
 from tngsdk.package.packager.packager import EtsiPackager, TestPackager
 from tngsdk.package.packager.tango_packager import TangoPackager
 from tngsdk.package.packager.osm_packager import OsmPackager
+from tngsdk.package.packager.onap_packager import OnapPackager
 from tngsdk.package.packager.exeptions import \
     UnsupportedPackageFormatException
 
@@ -24,6 +25,8 @@ class PackagerManager(object):
             packager_cls = EtsiPackager
         elif pkg_format == "eu.etsi.osm":
             packager_cls = OsmPackager
+        elif pkg_format == "eu.lf.onap":
+            packager_cls = OnapPackager
         elif pkg_format == "test":
             packager_cls = TestPackager
         # check if we have a packager for the given format or abort

@@ -200,6 +200,26 @@ class OsmPackager(EtsiPackager):
         return osm_package_set
 
 
+class OsmPackage:
+    """
+    Contains runtime data to a single OsmPackage.
+    """
+
+    def __init__(self, descriptor_file, **kwargs):
+        self._subdir = None
+        self.folders = None
+        self.project_name = ""
+        self.temp_dir = None
+        self.descriptor_file = descriptor_file
+        self.__dict__.update(kwargs)
+        self._subdir = "_".join(
+            [self.project_name,
+             os.path.splitext(
+                 os.path.basename(self.descriptor_file["filename"]))[0]])
+        self.package_name = self._subdir
+        self.package_content = []
+
+
 class OsmPackagesSet(NapdRecord):
     """
     Contains runtime data for creating OSM-Packages from 5GTANGO projects.
@@ -226,11 +246,13 @@ class OsmPackagesSet(NapdRecord):
         Returns:
             Generator object like [self.nsd] + self.vnfds
         """
-        yield self.nsd
+        if self.nsd:
+            yield self.nsd
         for vnfd in self.vnfds.values():
             yield vnfd
 
-    def _sort_files(self, folders_nsd=folders_nsd, folders_vnf=folders_vnf):
+    def _sort_files(self, _type='osm', package_class=OsmPackage,
+                    folders_nsd=folders_nsd, folders_vnf=folders_vnf):
         """
         Iterates over self.napdr.package_content and filters for files
         relevant for OSM (identified by content-type and tags). Creates
@@ -250,25 +272,24 @@ class OsmPackagesSet(NapdRecord):
         vnf_files = []
         unique_files = {}
         for file in self.package_content:
-            if "osm.nsd" in file["content-type"]:
-                self.nsd = OsmPackage(file, project_name=self.project_name,
-                                      folders=folders_nsd)
-            elif "osm.vnfd" in file["content-type"]:
+            if _type + ".nsd" in file["content-type"]:
+                self.nsd = package_class(file, project_name=self.project_name,
+                                         folders=folders_nsd)
+            elif _type + ".vnfd" in file["content-type"]:
                 _filename = os.path.splitext(file["filename"])[0]
                 self.vnfds[_filename] = (
-                    OsmPackage(file,
-                               project_name=self.project_name,
-                               folders=folders_vnf))
+                    package_class(file, project_name=self.project_name,
+                                  folders=folders_vnf))
             else:
                 tags = map(lambda tag: tag.split("."), file["tags"])
                 for tag in tags:
-                    if tag[-1] == "osm":
+                    if tag[-1] == _type:
                         general_files.append(file)
-                    elif tag[-2:] == ["osm", "ns"]:
+                    elif tag[-2:] == [_type, "ns"]:
                         ns_files.append(file)
-                    elif tag[-2:] == ["osm", "vnf"]:
+                    elif tag[-2:] == [_type, "vnf"]:
                         vnf_files.append(file)
-                    elif tag[-3:-1] == ["osm", "vnf"]:
+                    elif tag[-3:-1] == [_type, "vnf"]:
                         if tag[-1] in unique_files:
                             unique_files[tag[-1]].append(file)
                         else:
@@ -282,23 +303,3 @@ class OsmPackagesSet(NapdRecord):
             vnf_package.package_content.extend(general_files+vnf_files)
             if name in unique_files:
                 self.vnfds[name].package_content.extend(unique_files[name])
-
-
-class OsmPackage:
-    """
-    Contains runtime date to a single OsmPackage.
-    """
-
-    def __init__(self, descriptor_file, **kwargs):
-        self._subdir = None
-        self.folders = None
-        self.project_name = ""
-        self.temp_dir = None
-        self.descriptor_file = descriptor_file
-        self.__dict__.update(kwargs)
-        self._subdir = "_".join(
-            [self.project_name,
-             os.path.splitext(
-                 os.path.basename(self.descriptor_file["filename"]))[0]])
-        self.package_name = self._subdir
-        self.package_content = []
