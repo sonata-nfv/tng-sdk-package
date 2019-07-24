@@ -310,6 +310,14 @@ def parse_args(input_args=None):
         required=False,
         default=5099,
         dest="service_port")
+    parser.add_argument(
+        "--no-subfolder-compression",
+        help="Ignore type application/vnd.folder.compressed.zip",
+        required=False,
+        default=False,
+        action="store_true",
+        dest="no_subfolder_compression"
+    )
     if input_args is None:
         input_args = sys.argv[1:]
     return parser.parse_args(input_args)
