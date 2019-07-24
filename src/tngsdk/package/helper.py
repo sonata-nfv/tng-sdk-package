@@ -139,3 +139,16 @@ def find_root_folder_of_pkg(d):
         if len(lst) > 0:
             return lst[0].replace(ri, "")
     return d
+
+
+def creat_zip_file_from_directory(path_src, path_dest):
+    LOG.debug("Zipping '{}' ...".format(path_dest))
+    t_start = time.time()
+    zf = zipfile.ZipFile(path_dest, 'w', zipfile.ZIP_DEFLATED)
+    for root, _, files in os.walk(path_src):
+        for f in files:
+            zf.write(os.path.join(root, f),
+                     os.path.relpath(
+                         os.path.join(root, f), path_src))
+    zf.close()
+    LOG.debug("Zipping done ({:.4f}s)".format(time.time()-t_start))
