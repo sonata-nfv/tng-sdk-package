@@ -34,10 +34,12 @@
 import unittest
 import threading
 import yaml
+import os
+import zipfile
 from tngsdk.package.cli import parse_args
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import parse_block_based_meta_file
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
 
 
 class TngSdkPackagePackagerHelperTest(unittest.TestCase):
@@ -197,3 +199,51 @@ class TngSdkPackagePackagerTest(unittest.TestCase):
         result = yaml.load(f)
         f.close()
         self.assertEqual(result, project_descriptor)
+
+    def test_zip_subfolder(self):
+        tmp = mkdtemp()
+        tmp_files = [NamedTemporaryFile(dir=tmp) for i in range(5)]
+        file_descriptor = {"path": tmp}
+
+        p = PM.new_packager(self.default_args, pkg_format="test")
+        dest = p.zip_subfolder(pp=".", **file_descriptor)
+
+        self.assertTrue(os.path.isfile(dest))
+        self.assertEqual(os.path.splitext(dest)[1], ".zip")
+
+        with zipfile.ZipFile(dest) as zf:
+            names = zf.namelist()
+            for file in tmp_files:
+                self.assertIn(os.path.basename(file.name), names)
+
+    def test_compress_subfolders(self):
+        tmp_subfolders = [mkdtemp() for i in range(5)]
+        tmp_files = [[NamedTemporaryFile(dir=tmp) for i in range(5)]
+                     for tmp in tmp_subfolders]
+        file_descriptors = [{"path": tmp,
+                             "type": "application/vnd.folder.compressed.zip"}
+                            for tmp in tmp_subfolders]
+        file_descriptors_not_subfolder = [{"path": "path/to", "type": "type"}
+                                          for i in range(5)]
+        project_descriptor = {
+            "files": file_descriptors + file_descriptors_not_subfolder}
+
+        p = PM.new_packager(self.default_args, pkg_format="test")
+        p.compress_subfolders(project_descriptor, ".")
+
+        for i, file in enumerate(project_descriptor["files"]):
+            if file["type"] != "application/vnd.folder.compressed.zip":
+                continue
+            self.assertTrue(os.path.exists(file["_project_source"]),
+                            msg=os.listdir(
+                                os.path.dirname(file["_project_source"])))
+            self.assertTrue(os.path.isfile(file["_project_source"]),
+                            msg=os.listdir(
+                                os.path.dirname(file["_project_source"])))
+            self.assertEqual(os.path.splitext(file["_project_source"])[1],
+                             ".zip")
+
+            with zipfile.ZipFile(file["_project_source"]) as zf:
+                names = zf.namelist()
+                for tmp_file in tmp_files[i]:
+                    self.assertIn(os.path.basename(tmp_file.name), names)

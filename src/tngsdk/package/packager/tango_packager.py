@@ -2,8 +2,6 @@ import os
 import tempfile
 import shutil
 import yaml
-import zipfile
-import time
 import pyrfc3339
 from tngsdk.package.helper import creat_zip_file_from_directory
 from tngsdk.package.validator import \
@@ -13,7 +11,8 @@ from tngsdk.package.packager.exeptions import MetadataValidationException,\
     NapdNotValidException,\
     ChecksumException,\
     MissingFileException
-from tngsdk.package.helper import search_for_file, extract_zip_file_to_temp
+from tngsdk.package.helper import search_for_file, extract_zip_file_to_temp,\
+    creat_zip_file_from_directory
 from tngsdk.package.storage.tngprj import TangoProjectFilesystemBackend
 from tngsdk.package.logger import TangoLogger
 
