@@ -40,11 +40,18 @@ class OnapPackager(OsmPackager):
                 os.path.join(wd, "{}.csar".format(package.package_name)))
             creat_zip_file_from_directory(package.temp_dir, package_path)
 
-    def write_tosca_metadata(self, package_set, direc="TOSCA-Metadata",
-                             tosca_filename="TOSCA.meta"):
+    def write_tosca_metadata(self, package_set, TOSCA_direc="TOSCA-Metadata",
+                             tosca_filename="TOSCA.meta",
+                             etsi_mf_filename="etsi_manifest.mf"):
+
         for package in package_set.packages():
             with open(os.path.join(package.temp_dir,
-                                   direc, tosca_filename), "w") as f:
+                                   etsi_mf_filename), "w") as f:
+                yaml.dump(self.generate_etsi_mf(package, package_set), f,
+                          default_flow_style=False)
+
+            with open(os.path.join(package.temp_dir,
+                                   TOSCA_direc, tosca_filename), "w") as f:
                 yaml.dump(self.generate_tosca(package, package_set), f,
                           default_flow_style=False)
 
@@ -54,6 +61,43 @@ class OnapPackager(OsmPackager):
                  "Created-By": package_set.maintainer,
                  "Entry-Definitions": package.descriptor_file["filename"]}
         return tosca
+
+    def generate_etsi_mf(self, package, package_set):
+        data = list()
+        b0 = None
+        print("conten-type: ")
+        print(package.descriptor_file["content-type"])
+        if (package.descriptor_file["content-type"] ==
+                "application/vnd.onap.nsd"):
+            b0 = {"ns_product_name": package_set.name,
+                  "ns_provider_id": package_set.vendor,
+                  "ns_package_version": package_set.version,
+                  "ns_release_date_time": package_set.release_date_time}
+        elif (package.descriptor_file["content-type"] ==
+              "application/vnd.onap.vnfd"):
+            b0 = {"vnf_product_name": package_set.name,
+                  "vnf_provider_id": package_set.vendor,
+                  "vnf_package_version": package_set.version,
+                  "vnf_release_date_time": package_set.release_date_time}
+        elif (package.descriptor_file["content-type"] ==
+              "application/vnd.onap.pnfd"):
+            b0 = {"pnfd_name": package_set.name,
+                  "pnfd_provider": package_set.vendor,
+                  "pnfd_archive_version": package_set.version,
+                  "pnfd_release_date_time": package_set.release_date_time}
+        data.append(b0)
+        data.append({"Source": package.descriptor_file.get("source"),
+                     "Algorithm": package.descriptor_file.get("algorithm"),
+                     "Hash": package.descriptor_file.get("hash")})
+        for pc in package.package_content:
+            bN = {"Source": pc.get("source"),
+                  "Algorithm": pc.get("algorithm"),
+                  "Hash": pc.get("hash")}
+            data.append(bN)
+        print("data: ")
+        print(data)
+        print("data end")
+        return data
 
     @OsmPackager._do_package_closure
     def _do_package(self, napdr, project_path=None, **kwargs):
