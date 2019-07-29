@@ -261,7 +261,8 @@ class Packager(object):
             try:
                 # 0. validate project with external validator
                 if (self.args.skip_validation or
-                        self.args.validation_level == "skip"):
+                        self.args.validation_level == "skip" or
+                        os.environ.get("SKIP_VALIDATION", "False") == "True"):
                     LOG.warning(
                         "Skipping validation (--skip-validation).")
                 else:
