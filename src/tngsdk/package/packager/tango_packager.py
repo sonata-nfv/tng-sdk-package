@@ -260,7 +260,8 @@ class TangoPackager(EtsiPackager):
             # Solution: we store it to a temporary 5GTANGO project
             # only used for the validation step.
             if (self.args.skip_validation or
-                    self.args.validation_level == 'skip'):
+                    self.args.validation_level == 'skip' or
+                    os.environ.get("SKIP_VALIDATION", "False") == "True"):
                 LOG.warning(
                     "Skipping validation (--skip-validation).")
             else:  # ok, do the validation
