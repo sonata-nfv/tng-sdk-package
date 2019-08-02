@@ -19,6 +19,7 @@ class OsmPackager(EtsiPackager):
         super().__init__(*args, **kwargs)
         self.checksum_algorithm = "MD5"
         self.ns_temp_dir = None
+        self._store_checksums = True
 
     def file_hash(self, *args, **kwargs):
         """
@@ -89,7 +90,7 @@ class OsmPackager(EtsiPackager):
             _makedirs(os.path.join(temp, folder))
         if descriptor is not None:
             shutil.copy(os.path.join(project_path, descriptor), temp)
-        if hash is not None:
+        if hash is not None and self._store_checksums:
             with open(os.path.join(temp, checks_filename), "w") as f:
                 f.writelines(["{} {}\n".format(hash, descriptor)])
         return temp
@@ -131,7 +132,8 @@ class OsmPackager(EtsiPackager):
                 shutil.copy(
                     os.path.join(project_path, file["_project_source"]),
                     destination)
-            self.store_checksums(package.temp_dir, package.package_content)
+            if self._store_checksums:
+                self.store_checksums(package.temp_dir, package.package_content)
 
     def pack_packages(self, wd, package_set):
         """
@@ -250,6 +252,7 @@ class OsmPackager(EtsiPackager):
         self.attach_files(osm_package_set, project_path)
         # 7. create packages from temporary directories
         self.pack_packages(wd, osm_package_set)
+        osm_package_set.metadata["_storage_location"] = wd
         return osm_package_set
 
 
@@ -305,7 +308,9 @@ class OsmPackagesSet(NapdRecord):
             yield vnfd
 
     def _sort_files(self, _type='osm', package_class=OsmPackage,
-                    folders_nsd=folders_nsd, folders_vnf=folders_vnf):
+                    folders_nsd=folders_nsd, folders_vnf=folders_vnf,
+                    no_files_exception=NoOSMFilesFound(
+                        "No OSM-descriptor-files found in project")):
         """
         Iterates over self.napdr.package_content and filters for files
         relevant for OSM (identified by content-type and tags). Creates
@@ -349,7 +354,7 @@ class OsmPackagesSet(NapdRecord):
                             unique_files[tag[-1]] = [file]
 
         if self.nsd is None and self.vnfds == {}:
-            raise NoOSMFilesFound("No OSM-descriptor-files found in project")
+            raise no_files_exception
 
         self.nsd.package_content.extend(general_files+ns_files)
         for name, vnf_package in self.vnfds.items():

@@ -152,3 +152,18 @@ def creat_zip_file_from_directory(path_src, path_dest):
                          os.path.join(root, f), path_src))
     zf.close()
     LOG.debug("Zipping done ({:.4f}s)".format(time.time()-t_start))
+
+
+def write_block_based_meta_file(data, path):
+    """
+    Writes TOSCA/ETSI block-based meta files.
+    data = [block0_dict, ....blockN_dict]
+    """
+    with open(path, "w") as f:
+        for block in data:
+            if block is None:
+                continue
+            for k, v in block.items():
+                f.write("{}: {}\n".format(k, v))
+            f.write("\n")  # block separator
+

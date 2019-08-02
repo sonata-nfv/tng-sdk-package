@@ -32,3 +32,7 @@ class InvalidVersionFormat(Exception):
 
 class NoOSMFilesFound(BaseException):
     pass
+
+
+class NoOnapFilesFound(BaseException):
+    pass
