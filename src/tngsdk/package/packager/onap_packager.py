@@ -3,7 +3,6 @@ from hashlib import sha256
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.helper import creat_zip_file_from_directory,\
     write_block_based_meta_file, file_hash
-from tngsdk.package.packager.tango_packager import TangoPackager
 from tngsdk.package.packager.exeptions import NoOnapFilesFound
 from tngsdk.package.packager.osm_packager import OsmPackage, OsmPackagesSet, \
     OsmPackager
