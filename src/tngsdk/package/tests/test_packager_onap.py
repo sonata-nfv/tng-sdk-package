@@ -157,3 +157,96 @@ class TngSdkPackageOnapPackager(unittest.TestCase):
                 for file in vnf.package_content:
                     filename = os.path.basename(file["filename"])
                     self.assertIn(filename, file_members)
+
+    def test_generate_tosca_generate_etsi_mf(self):
+        args = parse_args([])
+        p = OnapPackager(args)
+        package = OnapPackage({"filename": "test_file",
+                               "content-type": "application/vnd.onap.nsd",
+                               "source": "testdir",
+                               "algorithm": "SHA-256",
+                               "hash": "value1"})
+        for i in range(12):
+            package.package_content.append(
+                {"filename": "test_file_pc" + str(i),
+                 "source": "testdir_pc" + str(i),
+                 "algorithm": "SHA-256",
+                 "hash": "value" + str(i)}
+            )
+        package_set = OnapPackageSet(NapdRecord())
+
+        tosca = p.generate_tosca(package, package_set)
+        self.assertEqual(tosca[0], {"TOSCA-Meta-Version": "1.0",
+                                    "CSAR-Version": "1.0",
+                                    "Created-By": None,
+                                    "Entry-Definitions": "test_file"})
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"ns_product_name": None,
+                                      "ns_provider_id": None,
+                                      "ns_package_version": None,
+                                      "ns_release_date_time": None})
+
+        package.descriptor_file["content-type"] = "application/vnd.onap.vnfd"
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"vnf_product_name": None,
+                                      "vnf_provider_id": None,
+                                      "vnf_package_version": None,
+                                      "vnf_release_date_time": None})
+
+        package.descriptor_file["content-type"] = "application/vnd.onap.pnfd"
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"pnfd_name": None,
+                                      "pnfd_provider": None,
+                                      "pnfd_archive_version": None,
+                                      "pnfd_release_date_time": None})
+
+        package.descriptor_file["content-type"] = "application/vnd.onap.nsd"
+        maintainer = "maintainer"
+        name = "name"
+        vendor = "vendor"
+        version = "1.1"
+        release_date_time = "2018_08_01"
+        package_set.maintainer = maintainer
+        package_set.name = name
+        package_set.vendor = vendor
+        package_set.version = version
+        package_set.release_date_time = release_date_time
+
+        tosca = p.generate_tosca(package, package_set)
+        self.assertEqual(tosca[0], {"TOSCA-Meta-Version": "1.0",
+                                    "CSAR-Version": "1.0",
+                                    "Created-By": maintainer,
+                                    "Entry-Definitions": "test_file"})
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"ns_product_name": name,
+                                      "ns_provider_id": vendor,
+                                      "ns_package_version": version,
+                                      "ns_release_date_time":
+                                          release_date_time})
+
+        package.descriptor_file["content-type"] = "application/vnd.onap.vnfd"
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"vnf_product_name": name,
+                                      "vnf_provider_id": vendor,
+                                      "vnf_package_version": version,
+                                      "vnf_release_date_time":
+                                          release_date_time})
+
+        package.descriptor_file["content-type"] = "application/vnd.onap.pnfd"
+        etsi_mf = p.generate_etsi_mf(package, package_set)
+        self.assertEqual(etsi_mf[0], {"pnfd_name": name,
+                                      "pnfd_provider": vendor,
+                                      "pnfd_archive_version": version,
+                                      "pnfd_release_date_time":
+                                          release_date_time})
+        print("descriptor: ")
+        print(package.descriptor_file)
+        print("package_content: ")
+        print(package.package_content)
+        print("etsi_mf: ")
+        print(etsi_mf)
+        for i, pc in enumerate(etsi_mf[2:]):
+            self.assertEqual(pc, {"Source": "testdir_pc" + str(i) +
+                                            "/test_file_pc" + str(i),
+                                  "Algorithm": "SHA-256",
+                                  "Hash": "value" + str(i)})

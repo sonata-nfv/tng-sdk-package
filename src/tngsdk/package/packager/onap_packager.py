@@ -1,12 +1,8 @@
-import tempfile
 import os
-import zipfile
-import yaml
+from hashlib import sha256
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.helper import creat_zip_file_from_directory,\
-    write_block_based_meta_file
-from tngsdk.package.packager.packager import EtsiPackager, NapdRecord
-from tngsdk.package.packager.tango_packager import TangoPackager
+    write_block_based_meta_file, file_hash
 from tngsdk.package.packager.exeptions import NoOnapFilesFound
 from tngsdk.package.packager.osm_packager import OsmPackage, OsmPackagesSet, \
     OsmPackager
@@ -22,7 +18,7 @@ class OnapPackageSet(OsmPackagesSet):
     folders = ["Artifacts", "TOSCA-Metadata"]
 
     def _sort_files(self, _type='onap', package_class=OnapPackage,
-                            folders_nsd=folders, folders_vnf=folders,
+                    folders_nsd=folders, folders_vnf=folders,
                     no_files_exception=NoOnapFilesFound(
                         "No Onap-descriptor-files found in project")):
 
@@ -36,6 +32,20 @@ class OnapPackager(OsmPackager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._store_checksums = False
+        self.checksum_algorithm = "SHA-256"
+
+    def file_hash(self, *args, **kwargs):
+        """
+        Returns hash value for a onap-file (SHA-256 Algorithm),
+        by using helper.file_hash().
+        Args:
+            *args:
+            **kwargs:
+
+        Returns:
+            hash value
+        """
+        return file_hash(h_func=sha256, *args, **kwargs)
 
     def _pack_package_source_path(self, f):
         if "lf.onap" in f.get("tags"):
@@ -79,9 +89,10 @@ class OnapPackager(OsmPackager):
             LOG.debug("Writing TOSCA.meta to: {}".format(path))
             write_block_based_meta_file(tosca_data, path)
 
-    def generate_tosca(self, package, package_set):
-        tosca = {"TOSCA-Meta-Version": "1.0",
-                 "CSAR-Version": "1.0",
+    def generate_tosca(self, package, package_set, tosca_meta_version="1.0",
+                       csar_version="1.0"):
+        tosca = {"TOSCA-Meta-Version": tosca_meta_version,
+                 "CSAR-Version": csar_version,
                  "Created-By": package_set.maintainer,
                  "Entry-Definitions": package.descriptor_file["filename"]}
         return [tosca]
