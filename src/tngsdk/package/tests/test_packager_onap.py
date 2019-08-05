@@ -239,12 +239,6 @@ class TngSdkPackageOnapPackager(unittest.TestCase):
                                       "pnfd_archive_version": version,
                                       "pnfd_release_date_time":
                                           release_date_time})
-        print("descriptor: ")
-        print(package.descriptor_file)
-        print("package_content: ")
-        print(package.package_content)
-        print("etsi_mf: ")
-        print(etsi_mf)
         for i, pc in enumerate(etsi_mf[2:]):
             self.assertEqual(pc, {"Source": "testdir_pc" + str(i) +
                                             "/test_file_pc" + str(i),
