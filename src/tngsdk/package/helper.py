@@ -166,4 +166,3 @@ def write_block_based_meta_file(data, path):
             for k, v in block.items():
                 f.write("{}: {}\n".format(k, v))
             f.write("\n")  # block separator
-

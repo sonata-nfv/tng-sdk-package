@@ -74,7 +74,17 @@ class OnapPackager(OsmPackager):
 
     def write_manifests(self, package_set, TOSCA_direc="TOSCA-Metadata",
                         tosca_filename="TOSCA.meta"):
+        """
+        Iterates over package_ser.packages() and writes TOSCA.meta and
+        etsi_manifest using helper function write_block_based_meta_file.
+        Args:
+            package_set: of type OnapPackageSet
+            TOSCA_direc:
+            tosca_filename:
 
+        Returns: None
+
+        """
         for package in package_set.packages():
 
             etsi_mf_filename = os.path.splitext(
@@ -91,6 +101,18 @@ class OnapPackager(OsmPackager):
 
     def generate_tosca(self, package, package_set, tosca_meta_version="1.0",
                        csar_version="1.0"):
+        """
+        Returns tosca manifest as list of blocks for function
+        write_block_based_meta_file.
+        Args:
+            package: of type OnapPackage
+            package_set: of type OnapPackageSet
+            tosca_meta_version:
+            csar_version:
+
+        Returns:
+            list of dictionaries
+        """
         tosca = {"TOSCA-Meta-Version": tosca_meta_version,
                  "CSAR-Version": csar_version,
                  "Created-By": package_set.maintainer,
@@ -98,6 +120,16 @@ class OnapPackager(OsmPackager):
         return [tosca]
 
     def generate_etsi_mf(self, package, package_set):
+        """
+        Returns etsi manifest as list of blocks for function
+        write_block_based_meta_file.
+        Args:
+            package: of type OnapPackage
+            package_set: of type OnapPackageSet
+
+        Returns:
+            list of dictionaries
+        """
         data = list()
         b0 = None
         if (package.descriptor_file["content-type"] ==
@@ -134,7 +166,7 @@ class OnapPackager(OsmPackager):
     @OsmPackager._do_package_closure
     def _do_package(self, napdr, project_path=None, **kwargs):
         """
-        Pack a 5GTANGO project to OSM packages.
+        Pack a 5GTANGO project to Onap packages.
         """
         onap_package_set = OnapPackageSet(napdr)
         wd = self.args.output

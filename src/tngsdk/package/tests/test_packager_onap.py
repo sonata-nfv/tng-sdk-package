@@ -3,7 +3,7 @@ import tempfile
 import os
 import zipfile
 import yaml
-from tngsdk.package.tests.fixtures import misc_file, get_files
+from tngsdk.package.tests.fixtures import misc_file
 from tngsdk.package.packager import PM
 from tngsdk.package.packager.packager import NapdRecord
 from tngsdk.package.packager.onap_packager import OnapPackager, OnapPackage,\
@@ -35,7 +35,7 @@ class TngSdkPackageOnapPackager(unittest.TestCase):
         p = PM.new_packager(args, pkg_format=args.pkg_format)
 
         # execute
-        napdr = p._do_package()
+        p._do_package()
 
         packages = os.listdir(output)
         self.assertEqual(len(packages), 2)
