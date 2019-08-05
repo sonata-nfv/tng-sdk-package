@@ -49,4 +49,5 @@ files:
 - path: subfolder
   tags: 
   - etsi.osm
+  - lf.onap
   type: application/vnd.folder.compressed.zip
