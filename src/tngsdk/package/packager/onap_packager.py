@@ -3,6 +3,7 @@ from hashlib import sha256
 from tngsdk.package.logger import TangoLogger
 from tngsdk.package.helper import creat_zip_file_from_directory,\
     write_block_based_meta_file, file_hash
+from tngsdk.package.packager.tango_packager import TangoPackager
 from tngsdk.package.packager.exeptions import NoOnapFilesFound
 from tngsdk.package.packager.osm_packager import OsmPackage, OsmPackagesSet, \
     OsmPackager
@@ -33,6 +34,22 @@ class OnapPackager(OsmPackager):
         super().__init__(*args, **kwargs)
         self._store_checksums = False
         self.checksum_algorithm = "SHA-256"
+
+    def compress_subfolders(self, project_descriptor, pp):
+        """
+        Finds subfolders (package_content of type
+        'application/vnd.folder.compressed.zip') and zips them to a temp
+        directory.
+        Args:
+            project_descriptor:
+            pp:
+
+        Returns:
+            None
+        """
+        for file in project_descriptor["files"]:
+            if 'application/vnd.folder.compressed.zip' == file["type"]:
+                file["_project_source"] = self.zip_subfolder(pp=pp, **file)
 
     def file_hash(self, *args, **kwargs):
         """
