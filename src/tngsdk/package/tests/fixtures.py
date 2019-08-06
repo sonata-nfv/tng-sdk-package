@@ -44,6 +44,14 @@ def misc_file(filename):
 
 
 def get_files(path):
+    """
+    Returns a list of filepaths in a project.
+    Args:
+        path:
+
+    Returns:
+        list of strs
+    """
     files = os.listdir(path)
     dirs = []
     for i, file in enumerate(files):

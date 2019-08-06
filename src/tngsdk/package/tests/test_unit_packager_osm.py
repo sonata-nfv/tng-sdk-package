@@ -261,7 +261,6 @@ class TngSdkPackageOSMPackager(unittest.TestCase):
 
         packages = os.listdir(output)
         subfolder_files = get_files(os.path.join(project, "subfolder"))
-        print(subfolder_files)
         for package in packages:
             with tarfile.open(os.path.join(output, package)) as f:
                 member_names = list(

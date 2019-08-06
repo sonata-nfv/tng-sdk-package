@@ -705,12 +705,13 @@ class EtsiPackager(CsarBasePackager):
                     path, ce.get("algorithm"), ce.get("hash"))
             except ChecksumException as e:
                 # decide if checksum missmatch is error
-                print((self.args.no_checksums))
+                print(self.args.no_checksums)
                 if self.args.no_checksums:
                     # LOG.warning(e)
                     LOG.warning("Ignoring error (--ignore-checksums)")
                 else:
                     raise e
+
 
 # #########################
 # Helpers

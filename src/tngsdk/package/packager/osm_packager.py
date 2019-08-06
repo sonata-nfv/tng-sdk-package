@@ -19,6 +19,7 @@ class OsmPackager(EtsiPackager):
         super().__init__(*args, **kwargs)
         self.checksum_algorithm = "MD5"
         self.ns_temp_dir = None
+        self._store_checksums = True
 
     def file_hash(self, *args, **kwargs):
         """
@@ -89,7 +90,7 @@ class OsmPackager(EtsiPackager):
             _makedirs(os.path.join(temp, folder))
         if descriptor is not None:
             shutil.copy(os.path.join(project_path, descriptor), temp)
-        if hash is not None:
+        if hash is not None and self._store_checksums:
             with open(os.path.join(temp, checks_filename), "w") as f:
                 f.writelines(["{} {}\n".format(hash, descriptor)])
         return temp
@@ -131,7 +132,8 @@ class OsmPackager(EtsiPackager):
                 shutil.copy(
                     os.path.join(project_path, file["_project_source"]),
                     destination)
-            self.store_checksums(package.temp_dir, package.package_content)
+            if self._store_checksums:
+                self.store_checksums(package.temp_dir, package.package_content)
 
     def pack_packages(self, wd, package_set):
         """
@@ -250,7 +252,28 @@ class OsmPackager(EtsiPackager):
         self.attach_files(osm_package_set, project_path)
         # 7. create packages from temporary directories
         self.pack_packages(wd, osm_package_set)
+        osm_package_set.metadata["_storage_location"] = wd
         return osm_package_set
+
+
+class OsmPackage:
+    """
+    Contains runtime data to a single OsmPackage.
+    """
+
+    def __init__(self, descriptor_file, **kwargs):
+        self._subdir = None
+        self.folders = None
+        self.project_name = ""
+        self.temp_dir = None
+        self.descriptor_file = descriptor_file
+        self.__dict__.update(kwargs)
+        self._subdir = "_".join(
+            [self.project_name,
+             os.path.splitext(
+                 os.path.basename(self.descriptor_file["filename"]))[0]])
+        self.package_name = self._subdir
+        self.package_content = []
 
 
 class OsmPackagesSet(NapdRecord):
@@ -279,11 +302,15 @@ class OsmPackagesSet(NapdRecord):
         Returns:
             Generator object like [self.nsd] + self.vnfds
         """
-        yield self.nsd
+        if self.nsd:
+            yield self.nsd
         for vnfd in self.vnfds.values():
             yield vnfd
 
-    def _sort_files(self, folders_nsd=folders_nsd, folders_vnf=folders_vnf):
+    def _sort_files(self, _type='osm', package_class=OsmPackage,
+                    folders_nsd=folders_nsd, folders_vnf=folders_vnf,
+                    no_files_exception=NoOSMFilesFound(
+                        "No OSM-descriptor-files found in project")):
         """
         Iterates over self.napdr.package_content and filters for files
         relevant for OSM (identified by content-type and tags). Creates
@@ -303,55 +330,34 @@ class OsmPackagesSet(NapdRecord):
         vnf_files = []
         unique_files = {}
         for file in self.package_content:
-            if "osm.nsd" in file["content-type"]:
-                self.nsd = OsmPackage(file, project_name=self.project_name,
-                                      folders=folders_nsd)
-            elif "osm.vnfd" in file["content-type"]:
+            if _type + ".nsd" in file["content-type"]:
+                self.nsd = package_class(file, project_name=self.project_name,
+                                         folders=folders_nsd)
+            elif _type + ".vnfd" in file["content-type"]:
                 _filename = os.path.splitext(file["filename"])[0]
                 self.vnfds[_filename] = (
-                    OsmPackage(file,
-                               project_name=self.project_name,
-                               folders=folders_vnf))
+                    package_class(file, project_name=self.project_name,
+                                  folders=folders_vnf))
             else:
                 tags = map(lambda tag: tag.split("."), file["tags"])
                 for tag in tags:
-                    if tag[-1] == "osm":
+                    if tag[-1] == _type:
                         general_files.append(file)
-                    elif tag[-2:] == ["osm", "ns"]:
+                    elif tag[-2:] == [_type, "ns"]:
                         ns_files.append(file)
-                    elif tag[-2:] == ["osm", "vnf"]:
+                    elif tag[-2:] == [_type, "vnf"]:
                         vnf_files.append(file)
-                    elif tag[-3:-1] == ["osm", "vnf"]:
+                    elif tag[-3:-1] == [_type, "vnf"]:
                         if tag[-1] in unique_files:
                             unique_files[tag[-1]].append(file)
                         else:
                             unique_files[tag[-1]] = [file]
 
         if self.nsd is None and self.vnfds == {}:
-            raise NoOSMFilesFound("No OSM-descriptor-files found in project")
+            raise no_files_exception
 
         self.nsd.package_content.extend(general_files+ns_files)
         for name, vnf_package in self.vnfds.items():
             vnf_package.package_content.extend(general_files+vnf_files)
             if name in unique_files:
                 self.vnfds[name].package_content.extend(unique_files[name])
-
-
-class OsmPackage:
-    """
-    Contains runtime date to a single OsmPackage.
-    """
-
-    def __init__(self, descriptor_file, **kwargs):
-        self._subdir = None
-        self.folders = None
-        self.project_name = ""
-        self.temp_dir = None
-        self.descriptor_file = descriptor_file
-        self.__dict__.update(kwargs)
-        self._subdir = "_".join(
-            [self.project_name,
-             os.path.splitext(
-                 os.path.basename(self.descriptor_file["filename"]))[0]])
-        self.package_name = self._subdir
-        self.package_content = []

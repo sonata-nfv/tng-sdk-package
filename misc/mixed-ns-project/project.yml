@@ -31,7 +31,9 @@ files:
   type: image/png
 - tags:
   - etsi.osm.vnf.osm_vnfd
+  - lf.onap
   - osm-target:images
+  - onap-target:Artifacts/Deployment/blabla/
   path: Images/mycloudimage.ref
   type: application/vnd.5gtango.ref
 - tags: []
@@ -39,6 +41,7 @@ files:
   type: text/plain
 - tags:
   - etsi.osm.vnf.osm_vnfd
+  - lf.onap
   path: test
   type: text/plain
 - tags:
