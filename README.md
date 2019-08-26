@@ -25,6 +25,12 @@ This component is implemented in Python3. Its requirements are specified [here](
 The automated installation requires `pip` (more specifically `pip3`).
 
 ```bash
+# install official release from PyPi
+$ pip install tngsdk.package
+```
+
+```bash
+# install latest version from GitHub master
 $ pip install git+https://github.com/sonata-nfv/tng-sdk-package
 ```
 

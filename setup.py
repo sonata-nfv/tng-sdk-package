@@ -44,7 +44,7 @@ test packages.
 
 setup(name='tngsdk.package',
       license='Apache License, Version 2.0',
-      version='5.0',
+      version='5.0.3',
       url='https://github.com/sonata-nfv/tng-sdk-package',
       author='Manuel Peuster',
       author_email='manuel.peuster@uni-paderborn.de',
@@ -53,9 +53,6 @@ setup(name='tngsdk.package',
       packages=find_packages('src'),  # dependency resolution
       namespace_packages=['tngsdk', ],
       include_package_data=True,
-      # package_data={
-      #    'tndsdk': ['project/samples/*']
-      # },
       install_requires=requirements,
       zip_safe=False,
       entry_points={
