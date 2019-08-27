@@ -36,7 +36,7 @@ import json
 import time
 import tempfile
 import os
-from mock import patch
+from unittest.mock import patch
 from requests.exceptions import RequestException
 from tngsdk.package.rest import app, on_unpackaging_done, on_packaging_done
 from tngsdk.package.packager import PM

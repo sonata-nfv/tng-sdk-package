@@ -32,7 +32,7 @@
 
 
 import unittest
-from mock import patch
+from unittest.mock import patch
 from requests.exceptions import RequestException
 from requests import get as real_get
 from tngsdk.package.cli import parse_args
