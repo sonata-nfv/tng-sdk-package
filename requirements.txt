@@ -6,3 +6,4 @@ coloredlogs
 requests
 flask-restplus
 pyrfc3339
+Werkzeug==0.16.1
